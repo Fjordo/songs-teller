@@ -9,6 +9,7 @@ from flask import Flask, request, jsonify
 from datetime import datetime
 import json
 import os
+import requests
 
 app = Flask(__name__)
 
@@ -107,11 +108,11 @@ def reset_session():
             print(f"\n{'='*60}\n")
             
             # Save to file
-            save_session_to_file(current_session['songs'])
+            if (config.get('save_session', False)):
+                save_session_to_file(current_session['songs'])
             
-            # TODO: Add LLM processing here
-            # Example: Query LLM about the songs/artists
-            # process_with_llm(current_session['songs'])
+            # Query LLM about the songs/artists
+            process_with_llm(current_session['songs'])
         
         song_count = len(current_session['songs'])
         
@@ -158,6 +159,83 @@ def save_session_to_file(songs):
         print(f"⚠️  Error saving to file: {e}")
 
 
+
+def load_config():
+    """Load configuration from JSON file."""
+    try:
+        # Config is in the *same* directory as this script (app/config.json)
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(base_path, 'config.json')
+        
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        print(f"⚠️  Error loading config: {e}")
+        return {}
+
+
+def process_with_llm(songs):
+    """
+    Send the list of songs to the configured LLM for processing using LangChain.
+    """
+    try:
+        from langchain_ollama import OllamaLLM
+        
+        if not songs:
+            return
+        
+        # Default settings
+        api_url = config.get('llm_api_url', 'http://localhost:11434') # Base URL for LangChain/Ollama
+        model = config.get('llm_model', 'llama3.1')
+        prompt_file = config.get('prompt_file', 'prompt.txt')
+        
+        # Resolve prompt file path
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        prompt_path = os.path.join(base_path, prompt_file)
+        
+        prompt_template = ""
+        try:
+           if os.path.exists(prompt_path):
+               with open(prompt_path, 'r', encoding='utf-8') as f:
+                   prompt_template = f.read()
+           else:
+               print(f"⚠️  Prompt file not found at: {prompt_path}")
+               prompt_template = "Analyze these songs:\n{songs_list}"
+        except Exception as e:
+             print(f"⚠️  Could not read prompt file: {e}")
+             prompt_template = "Analyze these songs:\n{songs_list}"
+
+        # Format song list
+        songs_list_str = "\n".join([f"- {s['artist']} - {s['title']}" for s in songs])
+        final_prompt = prompt_template.replace('{songs_list}', songs_list_str)
+        
+        print(f"🤖 Sending request to LLM ({model}) via LangChain (OllamaLLM)...")
+        
+        # Initialize LangChain Ollama wrapper
+        # Note: base_url should be the host, e.g. http://localhost:11434
+        # If the user put '/api/generate' in config, we might need to strip it, 
+        # but LangChain usually expects the base URL.
+        # Let's clean it just in case.
+        base_url = api_url.replace("/api/generate", "")
+        
+        llm = OllamaLLM(model=model, base_url=base_url)
+        
+        # Invoke the model
+        response = llm.invoke(final_prompt)
+        
+        print(f"\n{'='*20} LLM Analysis {'='*20}\n")
+        print(response)
+        print(f"\n{'='*54}\n")
+
+    except ImportError:
+         print(f"❌ Error: langchain-ollama is not installed. Please run: pip install -r requirements.txt")
+    except Exception as e:
+         print(f"❌ Error in process_with_llm: {e}")
+
+
+
 if __name__ == '__main__':
     print("="*60)
     print("🎵 Song Teller API Server")
@@ -169,4 +247,5 @@ if __name__ == '__main__':
     print("\nServer starting on http://localhost:5000")
     print("="*60 + "\n")
     
+    config = load_config()
     app.run(host='0.0.0.0', port=5000, debug=False)
