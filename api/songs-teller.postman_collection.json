@@ -1,0 +1,128 @@
+{
+  "info": {
+    "_postman_id": "7fdbc938-add8-470e-9fbb-c81fc2fd4677",
+    "name": "songs-teller",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "1958656"
+  },
+  "item": [
+    {
+      "name": "song",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"artist\": \"Iron Maiden\",\r\n  \"title\": \"The Prisoner\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{protocol}}{{base_url}}:{{port}}/api/song",
+          "host": [
+            "{{protocol}}{{base_url}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "api",
+            "song"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "session/reset",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"process\": true\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{protocol}}{{base_url}}:{{port}}/api/session/reset",
+          "host": [
+            "{{protocol}}{{base_url}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "api",
+            "session",
+            "reset"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "session/status",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{protocol}}{{base_url}}:{{port}}/api/session/status",
+          "host": [
+            "{{protocol}}{{base_url}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "api",
+            "session",
+            "status"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "protocol",
+      "value": ""
+    },
+    {
+      "key": "base_url",
+      "value": ""
+    },
+    {
+      "key": "port",
+      "value": ""
+    }
+  ]
+}
