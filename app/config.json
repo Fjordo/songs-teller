@@ -2,5 +2,20 @@
     "llm_api_url": "http://stepuntu:11434/api/generate",
     "llm_model": "llama3.1",
     "prompt_file": "prompt.txt",
-    "save_session": false
+    "save_session": false,
+    "tts_api_url": "http://stepuntu:4123/v1/audio/speech",
+    "tts_voice": "glow-speak:en_us_mary_ann_mid",
+    "play_audio": true,
+    "tts_options": {
+        "response_format": "mp3",
+        "speed": 1,
+        "stream_format": "audio",
+        "exaggeration": 0.25,
+        "cfg_weight": 1,
+        "temperature": 0.05,
+        "streaming_chunk_size": 50,
+        "streaming_strategy": "paragraph",
+        "streaming_buffer_size": 1,
+        "streaming_quality": "balanced"
+    }
 }

@@ -5,6 +5,8 @@ Analyze the musical journey, the genres covered, and the overall vibe.
 If there's a common theme or artist connection, mention it.
 Keep it cool and casual, like a radio DJ wrapping up a set.
 
+IMPORTANT: Provide ONLY the spoken commentary. Do NOT includes headers, titles, or intro text like "Here is the summary". just the raw text I should read on air.
+
 Here are the songs played:
 {songs_list}
 

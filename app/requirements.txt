@@ -1,3 +1,5 @@
 flask>=2.3.0
-requests
 langchain-community
+langchain-ollama
+pygame
+requests
