@@ -7,12 +7,14 @@
 - **Real-time Song Tracking**: Add songs to a session via a simple REST API.
 - **Session Management**: Track session start time, duration, and song history.
 - **AI Integration**: Automatically analyzes the session using a local LLM (Ollama) when the session is reset.
+- **Text-to-Speech**: Generates audio using a Chatterbox-compatible TTS service.
 - **Customizable Prompts**: Define the persona and output style via an external text file.
 
 ## Architecture
 
 - **Backend**: Python (Flask)
 - **AI Engine**: LangChain + Ollama (Local Llama 3.1)
+- **TTS Engine**: Chatterbox-compatible Service
 - **Data format**: JSON
 
 ## Getting Started
@@ -21,7 +23,10 @@
 
 1. **Python 3.8+**
 2. **Ollama**: For running the local LLM.
-    - See [Running Ollama Locally](docs/RUNNING_OLLAMA_LOCALLY.md) for installation and setup instructions.
+    - See [Running Ollama Locally](docs/RUNNING_OLLAMA_LOCALLY.md).
+3. **Chatterbox TTS**:
+    - You must configure a Chatterbox service.
+    - See [Running Chatterbox Locally](docs/RUNNING_CHATTERBOX_LOCALLY.md).
 
 ### Installation
 
@@ -34,17 +39,20 @@
 
 ### Configuration
 
-Edit `app/config.json` to configure the LLM connection:
+Edit `app/config.json` to configure LLM and TTS:
 
 ```json
 {
     "llm_api_url": "http://localhost:11434",
     "llm_model": "llama3.1",
-    "prompt_file": "prompt.txt"
+    "prompt_file": "prompt.txt",
+    "tts_api_url": "http://localhost:5500/v1/audio/speech",
+    "play_audio": true,
+    "tts_options": { ... }
 }
 ```
 
-Edit `app/prompt.txt` to change the instruction given to the AI (e.g., "Act as a music critic", "Act as a radio DJ").
+Edit `app/prompt.txt` to change the instruction given to the AI.
 
 ## Usage
 
@@ -69,6 +77,13 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/song" -Body (@{ar
 # Reset session and trigger AI analysis
 Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/session/reset" -Body (@{process=$true} | ConvertTo-Json) -ContentType "application/json"
 ```
+
+## TODOs
+
+- [ ] **AUDIO**: handle long text
+- [ ] **AUDIO**: speed up the generation to enable near real time processing
+- [ ] **TEXT**: improve initial prompt (generated text can be as it would be told from a radio speaker)
+- [ ] **TEXT**: improve llm output quality
 
 ## Documentation
 
