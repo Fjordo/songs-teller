@@ -84,6 +84,9 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/session/reset" -B
 - [ ] **AUDIO**: speed up the generation to enable near real time processing
 - [ ] **TEXT**: improve initial prompt (generated text can be as it would be told from a radio speaker)
 - [ ] **TEXT**: improve llm output quality
+- [ ] **GENERAL**: handle errors and saved files
+- [ ] **GENERAL**: test, we need tests
+- [ ] **PERFORMANCES**: audio generation is too slow, but that depends on the hardware of the extrernal service and the TTS engine
 
 ## Documentation
 

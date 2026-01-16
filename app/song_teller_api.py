@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Song Teller API Server
-Receives song information via HTTP API and tracks them in real-time.
 """
 
 from flask import Flask, request, jsonify
@@ -11,6 +10,10 @@ import os
 import requests
 import tempfile
 import pygame
+import shutil
+import threading
+import time
+import re
 
 app = Flask(__name__)
 
@@ -100,19 +103,39 @@ def reset_session():
         
         if should_process and len(current_session['songs']) > 0:
             print(f"\n{'='*60}")
-            print(f"🎵 Processing {len(current_session['songs'])} songs from session")
+            print(f"🔄 Closing Session with {len(current_session['songs'])} songs")
             print(f"{'='*60}\n")
-            
-            for i, song in enumerate(current_session['songs'], 1):
-                print(f"{i}. {song['artist']} - {song['title']}")
-            
-            print(f"\n{'='*60}\n")
             
             # Save to file
             if (config.get('save_session', False)):
                 save_session_to_file(current_session['songs'])
-            
-            # Query LLM about the songs/artists
+
+            # AUDIO BUFFERING: Asynchronous Playback
+            if config.get('buffer_audio', False) and config.get('play_audio', False):
+                 # Determine extension
+                 tts_opts = config.get('tts_options', {})
+                 ext = tts_opts.get('response_format', 'mp3')
+                 
+                 buffer_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'buffered_commentary.{ext}')
+                 if os.path.exists(buffer_file):
+                     # Move to a temp playing file to free up the buffer path for the new generation
+                     playing_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'playing_commentary.{ext}')
+                     
+                     # Ensure we overwrite if exists (though play_and_delete should clean it)
+                     if os.path.exists(playing_file):
+                         try: os.remove(playing_file)
+                         except: pass
+                         
+                     shutil.move(buffer_file, playing_file)
+                     print(f"🔊 Starting async playback of: {playing_file}")
+                     
+                     # Play in a separate thread so we don't block
+                     playback_thread = threading.Thread(target=play_and_delete, args=(playing_file,))
+                     playback_thread.start()
+                 else:
+                     print("ℹ️  No buffered audio found. Nothing to play yet.")
+
+            # Query LLM about the songs/artists (Generates new buffer)
             process_with_llm(current_session['songs'])
         
         song_count = len(current_session['songs'])
@@ -232,6 +255,9 @@ def process_with_llm(songs):
 
         # Speak the response if enabled
         speak_text(response)
+        
+        # Unload model to clear context
+        force_unload_model(base_url, model)
 
     except ImportError:
          print(f"❌ Error: langchain-ollama is not installed. Please run: pip install -r requirements.txt")
@@ -241,44 +267,78 @@ def process_with_llm(songs):
 
 def speak_text(text):
     """
-    Send text to TTS API and play the received audio.
+    Wrapper to handle synthesis and playback based on configuration.
+    """
+    config = load_config()
+    should_play = config.get('play_audio', False)
+    should_buffer = config.get('buffer_audio', False)
+    
+    if not should_play:
+        return
+
+    tts_opts = config.get('tts_options', {})
+    ext = tts_opts.get('response_format', 'mp3')
+
+    # Determine output path
+    if should_buffer:
+        output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'buffered_commentary.{ext}')
+        print("INFO: Buffering enabled. Generating audio for NEXT session...")
+    else:
+        # Temp file for immediate playback
+        fd, output_path = tempfile.mkstemp(suffix=f'.{ext}')
+        os.close(fd)
+
+    # Synthesize
+    success = synthesize_audio(text, output_path)
+    
+    if success:
+        if should_buffer:
+            print(f"✅ Audio buffered to {output_path}.")
+        else:
+            # Play immediately (synchronous for non-buffered mode)
+            play_and_delete(output_path)
+
+
+def synthesize_audio(text, output_path):
+    """
+    Sends text to TTS API and saves to output_path.
+    Returns True if success.
     """
     try:
         config = load_config()
-        if not config.get('play_audio', False):
-            return
-
         tts_url = config.get('tts_api_url')
         tts_voice = config.get('tts_voice')
         
         if not tts_url:
-            print("⚠️  TTS URL not configured. Skipping audio.")
-            return
+            print("⚠️  TTS URL not configured.")
+            return False
 
-        # Sanitize text: remove newlines and replace double quotes
+        # Sanitize text
+        # 1. Remove text between '=' chars (e.g. === Headers ===)
+        text = re.sub(r'=+.*?=+', ' ', text, flags=re.DOTALL)
+        # 2. Remove newlines and replace double quotes
         text = text.replace('\n', ' ').replace('"', "'").strip()
+        # 3. Clean up extra spaces
+        text = re.sub(r'\s+', ' ', text).strip()
         
         # Check for long text
         if len(text) >= 3000:
             print(f"INFO: Text length {len(text)} > 3000. Using /long endpoint.")
             if not tts_url.endswith('/long'):
-                 # Ensure we don't double slash if url ends with /
                  if tts_url.endswith('/'):
                      tts_url = f"{tts_url}long"
                  else:
                      tts_url = f"{tts_url}/long"
 
-        print(f"🗣️  Generating audio via {tts_url}...")
+        print(f"🗣️  Synthesizing audio via {tts_url}...")
         
         # Default extended params
         tts_options = config.get('tts_options', {})
         
-        # Chatterbox / OpenAI compatible API with extended params
         payload = {
             "model": "tts-1",
             "input": text,
-            "voice": tts_voice,  # Uses value from config
-            # Merge defaults if missing in config, though extensive config is best
+            "voice": tts_voice,
             "response_format": tts_options.get("response_format", "mp3"),
             "speed": tts_options.get("speed", 1),
             "stream_format": tts_options.get("stream_format", "audio"),
@@ -294,40 +354,92 @@ def speak_text(text):
         response = requests.post(tts_url, json=payload, stream=True)
         
         if response.status_code == 200:
-            # Create a temporary file
-            # We use delete=False because pygame needs to access it by path
-            # and Windows file locking can be tricky with open files
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as fp:
+            with open(output_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=1024):
                     if chunk:
-                        fp.write(chunk)
-                temp_path = fp.name
-            
-            print("🔊 Playing audio...")
-            pygame.mixer.init()
-            pygame.mixer.music.load(temp_path)
-            pygame.mixer.music.play()
-            
-            # Wait for playback to finish
-            while pygame.mixer.music.get_busy():
-                pygame.time.Clock().tick(10)
-                
-            pygame.mixer.quit()
-            
-            # Clean up
-            try:
-                os.remove(temp_path)
-            except:
-                pass
-                
+                        f.write(chunk)
+            print(f"💾 Audio saved to {output_path}")
+            return True
         else:
             print(f"❌ TTS Request failed: {response.status_code} - {response.text}")
+            return False
+            
+    except Exception as e:
+         print(f"❌ Error in synthesize_audio: {e}")
+         return False
+
+def play_and_delete(file_path):
+    """
+    Plays the audio file using pygame and deletes it afterwards.
+    Designed to run in a thread.
+    """
+    try:
+        print(f"🔊 Playing audio: {file_path}")
+        pygame.mixer.init()
+        pygame.mixer.music.load(file_path)
+        pygame.mixer.music.play()
+        
+        while pygame.mixer.music.get_busy():
+            # time.sleep is better for threading than pygame.time.Clock when not in a main loop
+            time.sleep(0.1)
+            
+        pygame.mixer.quit()
+        
+        # Clean up
+        try:
+            os.remove(file_path)
+            print(f"🗑️  Deleted played file: {file_path}")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not delete {file_path}: {e}")
             
     except ImportError:
-         print(f"❌ Error: pygame is not installed. Run: pip install -r requirements.txt")
+         print(f"❌ Error: pygame is not installed.")
     except Exception as e:
-         print(f"❌ Error in speak_text: {e}")
+         print(f"❌ Error playing audio: {e}")
 
+
+
+def force_unload_model(base_url, model):
+    """
+    Helper function to force unload Ollama model.
+    """
+    try:
+        # Handle cases where user might have put full endpoint in config
+        if '/api/generate' in base_url:
+            base_url = base_url.split('/api/generate')[0]
+            
+        url = f"{base_url}/api/generate"
+        payload = {
+            "model": model,
+            "keep_alive": 0
+        }
+        
+        print(f"🧠 Unloading model {model}...")
+        requests.post(url, json=payload)
+        return True
+    except Exception as e:
+        print(f"⚠️ Error unloading model: {e}")
+        return False
+
+@app.route('/api/llm/context/reset', methods=['POST'])
+def reset_llm_context():
+    """
+    Forces Ollama to unload the model, clearing context.
+    """
+    try:
+        config = load_config()
+        base_url = config.get('llm_api_url', 'http://localhost:11434')
+        model = config.get('llm_model', 'llama3.1')
+        
+        if force_unload_model(base_url, model):
+            print("✅ LLM Context reset successful.")
+            return jsonify({'status': 'success', 'message': 'LLM context reset'}), 200
+        else:
+            return jsonify({'status': 'error', 'message': 'Failed to reset context'}), 500
+            
+    except Exception as e:
+        print(f"❌ Error resetting LLM context: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 if __name__ == '__main__':
