@@ -269,7 +269,6 @@ def speak_text(text):
     """
     Wrapper to handle synthesis and playback based on configuration.
     """
-    config = load_config()
     should_play = config.get('play_audio', False)
     should_buffer = config.get('buffer_audio', False)
     
@@ -305,7 +304,6 @@ def synthesize_audio(text, output_path):
     Returns True if success.
     """
     try:
-        config = load_config()
         tts_url = config.get('tts_api_url')
         tts_voice = config.get('tts_voice')
         
@@ -427,7 +425,6 @@ def reset_llm_context():
     Forces Ollama to unload the model, clearing context.
     """
     try:
-        config = load_config()
         base_url = config.get('llm_api_url', 'http://localhost:11434')
         model = config.get('llm_model', 'llama3.1')
         
