@@ -3,17 +3,20 @@
 Song Teller API Server
 """
 
-from flask import Flask, request, jsonify
-from datetime import datetime
 import json
 import os
-import requests
-import tempfile
-import pygame
+import re
 import shutil
+import tempfile
 import threading
 import time
-import re
+from datetime import datetime
+
+import pygame
+import requests
+from dotenv import load_dotenv
+from flask import Flask, jsonify, request
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 app = Flask(__name__)
 
@@ -123,8 +126,9 @@ def reset_session():
                      
                      # Ensure we overwrite if exists (though play_and_delete should clean it)
                      if os.path.exists(playing_file):
-                         try: os.remove(playing_file)
-                         except: pass
+                        try: os.remove(playing_file)
+                        except Exception as e:
+                            print(f"⚠️ Warning: Could not remove existing playing file: {e}")
                          
                      shutil.move(buffer_file, playing_file)
                      print(f"🔊 Starting async playback of: {playing_file}")
@@ -185,7 +189,8 @@ def save_session_to_file(songs):
 
 
 def load_config():
-    """Load configuration from JSON file."""
+    """Load configuration from JSON file and .env"""
+    load_dotenv()
     try:
         # Config is in the *same* directory as this script (app/config.json)
         base_path = os.path.dirname(os.path.abspath(__file__))
@@ -391,7 +396,7 @@ def play_and_delete(file_path):
             print(f"⚠️ Warning: Could not delete {file_path}: {e}")
             
     except ImportError:
-         print(f"❌ Error: pygame is not installed.")
+         print("❌ Error: pygame is not installed.")
     except Exception as e:
          print(f"❌ Error playing audio: {e}")
 
