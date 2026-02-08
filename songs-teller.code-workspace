@@ -19,7 +19,8 @@
 		},
 		"editor.formatOnSave": true,
 		"[python]": {
-			"editor.defaultFormatter": "charliermarsh.ruff"
+			"editor.defaultFormatter": "charliermarsh.ruff",
+			"editor.wordWrapColumn": 120
 		},
 		"workbench.tree.indent": 16
 	}
