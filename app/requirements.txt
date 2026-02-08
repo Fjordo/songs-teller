@@ -1,5 +1,6 @@
 flask>=2.3.0
-langchain-community
-langchain-ollama
+google-cloud-texttospeech
+langchain-google-genai
 pygame
+python-dotenv
 requests
