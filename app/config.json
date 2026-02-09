@@ -1,14 +1,13 @@
 {
-    "mode": "google",
-
+    "mode": "local",
     "local": {
-        "llm_api_url": "http://stepuntu:11434",
-        "llm_model": "gemma-3-27b-it",
-        "tts_api_url": "http://localhost:8000/v1/audio/speech",
-        "tts_voice": "default",
+        "llm_api_url": "http://stepuntu:11434/api/generate",
+        "llm_model": "llama3.1",
+        "tts_api_url": "http://stepuntu:4123/v1/audio/speech",
+        "tts_voice": "alloy",
         "tts_options": {
             "response_format": "mp3",
-            "speed": 1,
+            "speed": 0.5,
             "stream_format": "audio",
             "exaggeration": 0.25,
             "cfg_weight": 1,
@@ -19,7 +18,6 @@
             "streaming_quality": "balanced"
         }
     },
-
     "google": {
         "llm_model": "gemini-2.0-flash",
         "tts_voice": "en-US-Neural2-D",
@@ -28,7 +26,6 @@
             "response_format": "wav"
         }
     },
-
     "prompt_file": "prompt.txt",
     "save_session": false,
     "play_audio": true,
