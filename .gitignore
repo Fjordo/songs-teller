@@ -1,8 +1,49 @@
-**/.env
-.venv
+# Python
 __pycache__/
-*.pyc
-instance/
-*.log
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
 
-songs-teller-*8.json
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Environment variables
+**/.env
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Flask
+instance/
+.webassets-cache
+
+# Credentials
+config/*.json
+!config/config.json
+!config/.env.example
+songs-teller-*.json
+google_cloud_tts_key.json
+
+# Audio files
+*.wav
+*.mp3
+buffered_commentary.*
+playing_commentary.*
+song_session_*.json

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Song Teller API Server — Entry point.
+Song Teller API Server — Main Flask application.
 """
 
 from flask import Flask
 
-from config import config, load_config
-from routes import register_routes
+from songs_teller.config import config, load_config
+from songs_teller.routes import register_routes
 
 
 def create_app():

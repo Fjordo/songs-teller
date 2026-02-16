@@ -10,9 +10,9 @@ from datetime import datetime
 
 from flask import jsonify, request
 
-from config import config
-from llm import force_unload_model, process_with_llm
-from tts import play_and_delete
+from songs_teller.config import config
+from songs_teller.llm import force_unload_model, process_with_llm
+from songs_teller.tts import play_and_delete
 
 # In-memory storage for current song session
 current_session = {"songs": [], "started_at": None, "last_updated": None}
@@ -33,10 +33,11 @@ def register_routes(app):
         }
         """
         try:
-            data = request.get_json()
-
-            if not data:
-                return jsonify({"error": "No JSON data provided"}), 400
+            # Try to parse JSON, return 400 if parsing fails
+            data = request.get_json(force=True, silent=True)
+            
+            if data is None:
+                return jsonify({"error": "Invalid or missing JSON data provided"}), 400
 
             artist = data.get("artist")
             title = data.get("title")
@@ -117,13 +118,15 @@ def register_routes(app):
                     tts_opts = mode_config.get("tts_options", {})
                     ext = tts_opts.get("response_format", "wav")
 
+                    # Get project root for buffer file location
+                    base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
                     buffer_file = os.path.join(
-                        os.path.dirname(os.path.abspath(__file__)),
+                        base_path,
                         f"buffered_commentary.{ext}",
                     )
                     if os.path.exists(buffer_file):
                         playing_file = os.path.join(
-                            os.path.dirname(os.path.abspath(__file__)),
+                            base_path,
                             f"playing_commentary.{ext}",
                         )
 
@@ -207,8 +210,10 @@ def register_routes(app):
 def _save_session_to_file(songs):
     """Save songs to a JSON file with timestamp."""
     try:
+        # Save to project root
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"song_session_{timestamp}.json"
+        filename = os.path.join(base_path, f"song_session_{timestamp}.json")
 
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(songs, f, indent=2, ensure_ascii=False)

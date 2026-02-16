@@ -7,8 +7,8 @@ import os
 import requests
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from config import config
-from tts import speak_text
+from songs_teller.config import config
+from songs_teller.tts import speak_text
 
 
 def process_with_llm(songs):
@@ -25,9 +25,9 @@ def process_with_llm(songs):
         model = mode_config.get("llm_model", "gemini-2.0-flash")
         prompt_file = config.get("prompt_file", "prompt.txt")
 
-        # Resolve prompt file path
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        prompt_path = os.path.join(base_path, prompt_file)
+        # Resolve prompt file path relative to config directory
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        prompt_path = os.path.join(base_path, "config", prompt_file)
 
         prompt_template = ""
         try:

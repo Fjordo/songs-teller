@@ -12,7 +12,7 @@ import requests
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
-from config import config
+from songs_teller.config import config
 
 
 def speak_text(text):
@@ -32,8 +32,10 @@ def speak_text(text):
 
     # Determine output path
     if should_buffer:
+        # Get project root for buffer file location
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         output_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), f"buffered_commentary.{ext}"
+            base_path, f"buffered_commentary.{ext}"
         )
         print("INFO: Buffering enabled. Generating audio for NEXT session...")
     else:
@@ -76,9 +78,9 @@ def synthesize_audio_google(text, output_path):
             print("❌ Error: google.tts_key_path not set in config.json.")
             return False
 
-        # Resolve key path relative to app/ directory
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        key_path = os.path.join(base_path, tts_key_path)
+        # Resolve key path relative to config directory
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        key_path = os.path.join(base_path, "config", tts_key_path)
 
         credentials = service_account.Credentials.from_service_account_file(key_path)
         client = texttospeech.TextToSpeechClient(credentials=credentials)
