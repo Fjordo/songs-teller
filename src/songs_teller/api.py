@@ -9,8 +9,13 @@ from songs_teller.config import config, load_config
 from songs_teller.routes import register_routes
 
 
-def create_app():
-    """Create and configure the Flask application."""
+def create_app() -> Flask:
+    """
+    Create and configure the Flask application.
+    
+    Returns:
+        Configured Flask application instance
+    """
     app = Flask(__name__)
     load_config()
     register_routes(app)

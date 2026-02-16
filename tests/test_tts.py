@@ -25,7 +25,7 @@ class TestSpeakText:
         tts.speak_text("Test text")
 
     @patch("songs_teller.tts.play_and_delete")
-    @patch("songs_teller.tts.synthesize_audio_google")
+    @patch("songs_teller.tts._synthesize_audio")
     @patch("songs_teller.tts.config")
     def test_speak_text_google_mode_immediate(
         self, mock_config, mock_synthesize, mock_play
@@ -77,7 +77,7 @@ class TestSpeakText:
         # (we can't easily check this without mocking it, but synthesize should be called)
 
     @patch("songs_teller.tts.play_and_delete")
-    @patch("songs_teller.tts.synthesize_audio_local")
+    @patch("songs_teller.tts._synthesize_audio")
     @patch("songs_teller.tts.config")
     def test_speak_text_local_mode(
         self, mock_config, mock_synthesize, mock_play
@@ -108,13 +108,15 @@ class TestSynthesizeAudioGoogle:
 
     @patch("songs_teller.tts.service_account.Credentials.from_service_account_file")
     @patch("songs_teller.tts.texttospeech.TextToSpeechClient")
+    @patch("songs_teller.tts._synthesize_chunks")
+    @patch("songs_teller.tts.get_config_path")
     @patch("songs_teller.tts.config")
-    @patch("songs_teller.tts.os.path.dirname")
-    @patch("songs_teller.tts.os.path.join")
     def test_synthesize_audio_google_success(
-        self, mock_join, mock_dirname, mock_config, mock_client_class, mock_credentials
+        self, mock_config, mock_get_path, mock_synthesize_chunks, mock_client_class, mock_credentials
     ):
         """Test successful Google TTS synthesis."""
+        from pathlib import Path
+        
         mock_config.get.side_effect = lambda key, default=None: {
             "google": {
                 "tts_voice": "en-US-Neural2-D",
@@ -131,13 +133,15 @@ class TestSynthesizeAudioGoogle:
             },
         }[key]
 
+        from unittest.mock import MagicMock
+        mock_key_path = MagicMock(spec=Path)
+        mock_key_path.exists.return_value = True
+        mock_get_path.return_value = mock_key_path
+
         mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.audio_content = b"fake audio data"
-        mock_client.synthesize_speech.return_value = mock_response
         mock_client_class.return_value = mock_client
 
-        mock_join.return_value = "test_key.json"
+        mock_synthesize_chunks.return_value = [b"fake audio data"]
 
         with tempfile.NamedTemporaryFile(delete=False) as f:
             temp_path = f.name

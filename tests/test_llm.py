@@ -184,8 +184,9 @@ class TestLLMLocal:
 
         mode_config = {"llm_api_url": "http://localhost:11434", "llm_model": "llama3.1"}
 
-        with pytest.raises(requests.exceptions.RequestException):
-            llm._llm_local("llama3.1", mode_config, "Test prompt")
+        # Should return None instead of raising exception
+        result = llm._llm_local("llama3.1", mode_config, "Test prompt")
+        assert result is None
 
 
 class TestForceUnloadModel:

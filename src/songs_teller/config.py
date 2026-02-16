@@ -3,23 +3,28 @@ Configuration loader for Song Teller.
 """
 
 import json
-import os
+from typing import Any, Dict
 
 from dotenv import load_dotenv
 
+from songs_teller.utils import get_config_path
+
 # Shared config dict — populated by load_config(), imported by other modules.
-config = {}
+config: Dict[str, Any] = {}
 
 
-def load_config():
-    """Load configuration from config.json and .env into the shared dict."""
+def load_config() -> Dict[str, Any]:
+    """
+    Load configuration from config.json and .env into the shared dict.
+    
+    Returns:
+        The loaded configuration dictionary
+    """
     load_dotenv()
     try:
-        # Get the project root directory (parent of src/)
-        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        config_path = os.path.join(base_path, "config", "config.json")
-
-        if os.path.exists(config_path):
+        config_path = get_config_path("config.json")
+        
+        if config_path.exists():
             with open(config_path, "r", encoding="utf-8") as f:
                 config.update(json.load(f))
     except Exception as e:

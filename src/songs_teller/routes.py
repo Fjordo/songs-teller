@@ -3,23 +3,29 @@ Flask route handlers for Song Teller API.
 """
 
 import json
-import os
 import shutil
 import threading
 from datetime import datetime
+from typing import Dict, List, Optional
 
-from flask import jsonify, request
+from flask import Flask, jsonify, request
 
 from songs_teller.config import config
 from songs_teller.llm import force_unload_model, process_with_llm
 from songs_teller.tts import play_and_delete
+from songs_teller.utils import get_project_root
 
 # In-memory storage for current song session
-current_session = {"songs": [], "started_at": None, "last_updated": None}
+current_session: Dict[str, any] = {"songs": [], "started_at": None, "last_updated": None}
 
 
-def register_routes(app):
-    """Register all API routes on the Flask app."""
+def register_routes(app: Flask) -> None:
+    """
+    Register all API routes on the Flask app.
+    
+    Args:
+        app: Flask application instance
+    """
 
     @app.route("/api/song", methods=["POST"])
     def add_song():
@@ -119,30 +125,22 @@ def register_routes(app):
                     ext = tts_opts.get("response_format", "wav")
 
                     # Get project root for buffer file location
-                    base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-                    buffer_file = os.path.join(
-                        base_path,
-                        f"buffered_commentary.{ext}",
-                    )
-                    if os.path.exists(buffer_file):
-                        playing_file = os.path.join(
-                            base_path,
-                            f"playing_commentary.{ext}",
-                        )
+                    base_path = get_project_root()
+                    buffer_file = base_path / f"buffered_commentary.{ext}"
+                    if buffer_file.exists():
+                        playing_file = base_path / f"playing_commentary.{ext}"
 
-                        if os.path.exists(playing_file):
+                        if playing_file.exists():
                             try:
-                                os.remove(playing_file)
+                                playing_file.unlink()
                             except Exception as e:
-                                print(
-                                    f"⚠️ Warning: Could not remove existing playing file: {e}"
-                                )
+                                print(f"⚠️ Warning: Could not remove existing playing file: {e}")
 
-                        shutil.move(buffer_file, playing_file)
+                        shutil.move(str(buffer_file), str(playing_file))
                         print(f"🔊 Starting async playback of: {playing_file}")
 
                         playback_thread = threading.Thread(
-                            target=play_and_delete, args=(playing_file,)
+                            target=play_and_delete, args=(str(playing_file),)
                         )
                         playback_thread.start()
                     else:
@@ -207,13 +205,16 @@ def register_routes(app):
             return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def _save_session_to_file(songs):
-    """Save songs to a JSON file with timestamp."""
+def _save_session_to_file(songs: List[Dict]) -> None:
+    """
+    Save songs to a JSON file with timestamp.
+    
+    Args:
+        songs: List of song dictionaries to save
+    """
     try:
-        # Save to project root
-        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = os.path.join(base_path, f"song_session_{timestamp}.json")
+        filename = get_project_root() / f"song_session_{timestamp}.json"
 
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(songs, f, indent=2, ensure_ascii=False)
