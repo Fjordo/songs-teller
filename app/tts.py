@@ -10,6 +10,7 @@ import time
 import pygame
 import requests
 from google.cloud import texttospeech
+from google.oauth2 import service_account
 
 from config import config
 
@@ -64,20 +65,23 @@ def synthesize_audio_google(text, output_path):
     Handles texts longer than 5000 bytes by chunking.
     """
     try:
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            print("❌ Error: GOOGLE_API_KEY not found for Google Cloud TTS.")
-            return False
-
         google_config = config.get("google", {})
         voice_name = google_config.get("tts_voice", "en-US-Neural2-D")
         language_code = google_config.get("tts_language_code", "en-US")
+        tts_key_path = google_config.get("tts_key_path")
 
         print(f"🎙️ Synthesizing with Google Cloud TTS (Voice: {voice_name})...")
 
-        client = texttospeech.TextToSpeechClient(
-            client_options={"api_key": api_key}
-        )
+        if not tts_key_path:
+            print("❌ Error: google.tts_key_path not set in config.json.")
+            return False
+
+        # Resolve key path relative to app/ directory
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        key_path = os.path.join(base_path, tts_key_path)
+
+        credentials = service_account.Credentials.from_service_account_file(key_path)
+        client = texttospeech.TextToSpeechClient(credentials=credentials)
 
         voice = texttospeech.VoiceSelectionParams(
             language_code=language_code,

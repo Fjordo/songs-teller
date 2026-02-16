@@ -67,10 +67,10 @@ def process_with_llm(songs):
 
 def _llm_google(model, prompt):
     """Call Google Gemini via LangChain."""
-    api_key = os.environ.get("GOOGLE_API_KEY")
+    api_key = os.environ.get("GOOGLE_AI_STUDIO_API_KEY")
     if not api_key:
         print(
-            "❌ Error: GOOGLE_API_KEY not found in .env. Please set it to use Google LLM."
+            "❌ Error: GOOGLE_AI_STUDIO_API_KEY not found in .env. Please set it to use Google LLM."
         )
         return None
 

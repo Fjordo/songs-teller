@@ -1,5 +1,6 @@
 flask>=2.3.0
 google-cloud-texttospeech
+google-genai
 langchain-google-genai
 pygame
 python-dotenv

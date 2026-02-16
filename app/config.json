@@ -1,5 +1,5 @@
 {
-    "mode": "local",
+    "mode": "google",
     "local": {
         "llm_api_url": "http://stepuntu:11434/api/generate",
         "llm_model": "llama3.1",
@@ -19,7 +19,8 @@
         }
     },
     "google": {
-        "llm_model": "gemini-2.0-flash",
+        "llm_model": "gemma-3-27b-it",
+        "tts_key_path": "google_cloud_tts_key.json",
         "tts_voice": "en-US-Neural2-D",
         "tts_language_code": "en-US",
         "tts_options": {
@@ -29,5 +30,5 @@
     "prompt_file": "prompt.txt",
     "save_session": false,
     "play_audio": true,
-    "buffer_audio": true
+    "buffer_audio": false
 }
