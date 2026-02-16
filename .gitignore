@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 instance/
 *.log
+
+songs-teller-*8.json

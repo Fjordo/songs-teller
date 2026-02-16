@@ -21,9 +21,9 @@
           }
         },
         "url": {
-          "raw": "{{protocol}}{{base_url}}:{{port}}/api/song",
+          "raw": "{{base_url}}:{{port}}/api/song",
           "host": [
-            "{{protocol}}{{base_url}}"
+            "{{base_url}}"
           ],
           "port": "{{port}}",
           "path": [
@@ -49,9 +49,9 @@
           }
         },
         "url": {
-          "raw": "{{protocol}}{{base_url}}:{{port}}/api/session/reset",
+          "raw": "{{base_url}}:{{port}}/api/session/reset",
           "host": [
-            "{{protocol}}{{base_url}}"
+            "{{base_url}}"
           ],
           "port": "{{port}}",
           "path": [
@@ -72,15 +72,120 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{protocol}}{{base_url}}:{{port}}/api/session/status",
+          "raw": "{{base_url}}:{{port}}/api/session/status",
           "host": [
-            "{{protocol}}{{base_url}}"
+            "{{base_url}}"
           ],
           "port": "{{port}}",
           "path": [
             "api",
             "session",
             "status"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "audio/speech",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "accept",
+            "value": "audio/wav"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"input\": \"What a killer session, folks! We just wrapped up an hour of face-melting metal mastery that'll leave you breathless. Kicking things off was the inimitable Freeway's vocal acrobatics on Queens' classic 'Hammer to Fall' - that man can sing his way through any power chord. But it was Iron Maiden who really brought the heat, as Bruce Dickinson's soaring vocals and galloping rhythms on 'The Prisoner' had us all headbanging in no time. You could feel the energy building from the start, and Nicko's pounding drums only added to the intensity. What a great choice of tunes to bring some heavy vibes into your day - we'll have more where that came from, but for now, let's just say it's been an absolute pleasure being your metal guide on this sonic journey. Until next time..\",\n  \"voice\": \"alloy\",\n  \"response_format\": \"mp3\",\n  \"speed\": 1,\n  \"stream_format\": \"audio\",\n  \"exaggeration\": 0.25,\n  \"cfg_weight\": 1,\n  \"temperature\": 0.05,\n  \"streaming_chunk_size\": 50,\n  \"streaming_strategy\": \"paragraph\",\n  \"streaming_buffer_size\": 1,\n  \"streaming_quality\": \"balanced\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{tts_baseurl}}:{{tts_port}}/audio/speech",
+          "host": [
+            "{{tts_baseurl}}"
+          ],
+          "port": "{{tts_port}}",
+          "path": [
+            "audio",
+            "speech"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "audio/speech/long",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "accept",
+            "value": "audio/wav"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"input\": \"What a killer session, folks! We just wrapped up an hour of face-melting metal mastery that'll leave you breathless. Kicking things off was the inimitable Freeway's vocal acrobatics on Queens' classic 'Hammer to Fall' - that man can sing his way through any power chord. But it was Iron Maiden who really brought the heat, as Bruce Dickinson's soaring vocals and galloping rhythms on 'The Prisoner' had us all headbanging in no time. You could feel the energy building from the start, and Nicko's pounding drums only added to the intensity. What a great choice of tunes to bring some heavy vibes into your day - we'll have more where that came from, but for now, let's just say it's been an absolute pleasure being your metal guide on this sonic journey. Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..Until next time..\",\n  \"voice\": \"alloy\",\n  \"response_format\": \"mp3\",\n  \"speed\": 1,\n  \"stream_format\": \"audio\",\n  \"exaggeration\": 0.25,\n  \"cfg_weight\": 1,\n  \"temperature\": 0.05,\n  \"streaming_chunk_size\": 50,\n  \"streaming_strategy\": \"paragraph\",\n  \"streaming_buffer_size\": 1,\n  \"streaming_quality\": \"balanced\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{tts_baseurl}}:{{tts_port}}/audio/speech/long",
+          "host": [
+            "{{tts_baseurl}}"
+          ],
+          "port": "{{tts_port}}",
+          "path": [
+            "audio",
+            "speech",
+            "long"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "audio/speech/long/status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "accept",
+            "value": "audio/wav"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{tts_baseurl}}:{{tts_port}}/audio/speech/long/b8910af4-6f61-4fd5-9427-d9d21a5617bb",
+          "host": [
+            "{{tts_baseurl}}"
+          ],
+          "port": "{{tts_port}}",
+          "path": [
+            "audio",
+            "speech",
+            "long",
+            "b8910af4-6f61-4fd5-9427-d9d21a5617bb"
           ]
         }
       },
@@ -113,15 +218,19 @@
   ],
   "variable": [
     {
-      "key": "protocol",
-      "value": ""
-    },
-    {
       "key": "base_url",
       "value": ""
     },
     {
       "key": "port",
+      "value": ""
+    },
+    {
+      "key": "tts_baseurl",
+      "value": ""
+    },
+    {
+      "key": "tts_port",
       "value": ""
     }
   ]
