@@ -20,7 +20,8 @@
     },
     "google": {
         "llm_model": "gemma-3-27b-it",
-        "tts_key_path": "google_cloud_tts_key.json",
+        "tts_key_path": "songs-teller-23f5e6774738.json",
+        // "tts_voice": "it-IT-Wavenet-F",
         "tts_voice": "en-US-Neural2-D",
         "tts_language_code": "en-US",
         "tts_options": {

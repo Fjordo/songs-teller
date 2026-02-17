@@ -3,6 +3,7 @@ Configuration loader for Song Teller.
 """
 
 import json
+import os
 from typing import Any, Dict
 
 from dotenv import load_dotenv
@@ -20,7 +21,10 @@ def load_config() -> Dict[str, Any]:
     Returns:
         The loaded configuration dictionary
     """
-    load_dotenv()
+    if(os.environ["DOTENV_PATH"] is not None):
+        load_dotenv(os.environ["DOTENV_PATH"])
+    else:
+        load_dotenv()
     try:
         config_path = get_config_path("config.json")
         
