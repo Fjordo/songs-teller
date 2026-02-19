@@ -47,7 +47,8 @@ Reset the current session and process songs.
 
 ```json
 {
-  "process": true
+  "process": true,
+  "play_opening_audio": true
 }
 ```
 

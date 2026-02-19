@@ -163,7 +163,7 @@ See [docs/API_USAGE.md](docs/API_USAGE.md) for detailed API definitions.
 Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/song" -Body (@{artist="Pink Floyd"; title="Time"} | ConvertTo-Json) -ContentType "application/json"
 
 # Reset session and trigger AI analysis
-Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/session/reset" -Body (@{process=$true} | ConvertTo-Json) -ContentType "application/json"
+Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/session/reset" -Body (@{process=$true; play_opening_audio=$true} | ConvertTo-Json) -ContentType "application/json"
 ```
 
 ## Testing
