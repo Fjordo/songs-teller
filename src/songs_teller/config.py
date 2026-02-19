@@ -17,17 +17,18 @@ config: Dict[str, Any] = {}
 def load_config() -> Dict[str, Any]:
     """
     Load configuration from config.json and .env into the shared dict.
-    
+
     Returns:
         The loaded configuration dictionary
     """
-    if(os.environ["DOTENV_PATH"] is not None):
-        load_dotenv(os.environ["DOTENV_PATH"])
+    dotenv_path = os.environ.get("DOTENV_PATH")
+    if dotenv_path is not None:
+        load_dotenv(dotenv_path)
     else:
         load_dotenv()
     try:
         config_path = get_config_path("config.json")
-        
+
         if config_path.exists():
             with open(config_path, "r", encoding="utf-8") as f:
                 config.update(json.load(f))
