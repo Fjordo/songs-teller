@@ -31,7 +31,7 @@
 				"name": "Debug song_teller_api.py",
 				"type": "debugpy",
 				"request": "launch",
-				"program": "app/song_teller_api.py"
+				"program": "src/songs_teller/api.py"
 			}
 		]
 	}
