@@ -41,7 +41,7 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n  \"process\": true\r\n}",
+          "raw": "{\r\n  \"process\": true,\r\n  \"play_opening_audio\": true\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -102,7 +102,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"input\": \"What a killer session, folks! We just wrapped up an hour of face-melting metal mastery that'll leave you breathless. Kicking things off was the inimitable Freeway's vocal acrobatics on Queens' classic 'Hammer to Fall' - that man can sing his way through any power chord. But it was Iron Maiden who really brought the heat, as Bruce Dickinson's soaring vocals and galloping rhythms on 'The Prisoner' had us all headbanging in no time. You could feel the energy building from the start, and Nicko's pounding drums only added to the intensity. What a great choice of tunes to bring some heavy vibes into your day - we'll have more where that came from, but for now, let's just say it's been an absolute pleasure being your metal guide on this sonic journey. Until next time..\",\n  \"voice\": \"alloy\",\n  \"response_format\": \"mp3\",\n  \"speed\": 1,\n  \"stream_format\": \"audio\",\n  \"exaggeration\": 0.25,\n  \"cfg_weight\": 1,\n  \"temperature\": 0.05,\n  \"streaming_chunk_size\": 50,\n  \"streaming_strategy\": \"paragraph\",\n  \"streaming_buffer_size\": 1,\n  \"streaming_quality\": \"balanced\"\n}",
+          "raw": "{\n  \"input\": \"Che sessione incredibile, gente! Abbiamo appena concluso un'ora di pura maestria metal che vi lascerà senza fiato. A dare il via sono state le inimitabili acrobazie vocali di Freeway sul classico dei Queen 'Hammer to Fall' – quell'uomo può cantare su qualsiasi power chord. Ma è stato davvero l'Iron Maiden a scaldare l'atmosfera, con le vocals stratosferiche di Bruce Dickinson e i ritmi galoppanti di 'The Prisoner' che ci hanno fatto subito scuotere la testa. Si poteva sentire l'energia crescere fin dall'inizio, e le percussioni martellanti di Nicko hanno solo aggiunto intensità. Che splendida scelta di brani per portare un po' di vibrazioni heavy nella vostra giornata – ne avremo ancora altre in arrivo, ma per ora, diciamo solo che è stato un vero piacere essere la vostra guida metal in questo viaggio sonoro. Alla prossima.\",\n  \"voice\": \"alloy_it\",\n  \"response_format\": \"mp3\",\n  \"speed\": 1,\n  \"stream_format\": \"audio\",\n  \"exaggeration\": 0.25,\n  \"cfg_weight\": 1,\n  \"temperature\": 0.05,\n  \"streaming_chunk_size\": 50,\n  \"streaming_strategy\": \"paragraph\",\n  \"streaming_buffer_size\": 1,\n  \"streaming_quality\": \"balanced\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -190,6 +190,42 @@
         }
       },
       "response": []
+    },
+    {
+      "name": "api/generate",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"model\": \"llama3.1\",\r\n    \"stream\": true,\r\n    \"prompt\": \"You are a knowledgeable music radio host and critic.\\nI will share a list of songs that were just played in a session.\\nYour task is to provide a brief, engaging summary of the session.\\nAnalyze the musical journey, the genres covered, and the overall vibe.\\nIf there is a common theme or artist connection, mention it.\\nKeep it cool and casual, like a radio DJ wrapping up a set.\\n\\nIMPORTANT: Provide ONLY the spoken commentary. Do NOT includes headers, titles, or intro text like \\\"Here is the summary\\\". just the raw text I should read on air.\\n\\nHere are the songs played:\\n{songs_list}\\n\\nPlease provide your commentary now.\"\r\n  }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{llm_baseurl}}:{{llm_port}}/api/generate",
+          "host": [
+            "{{llm_baseurl}}"
+          ],
+          "port": "{{llm_port}}",
+          "path": [
+            "api",
+            "generate"
+          ]
+        }
+      },
+      "response": []
     }
   ],
   "event": [
@@ -231,6 +267,14 @@
     },
     {
       "key": "tts_port",
+      "value": ""
+    },
+    {
+      "key": "llm_baseurl",
+      "value": ""
+    },
+    {
+      "key": "llm_port",
       "value": ""
     }
   ]

@@ -30,5 +30,6 @@
     "prompt_file": "prompt.txt",
     "save_session": false,
     "play_audio": true,
-    "buffer_audio": false
+    "buffer_audio": false,
+    "opening_audio_path": "audio/opening.mp3"
 }

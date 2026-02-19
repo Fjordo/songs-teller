@@ -25,7 +25,7 @@ AUDIO_POLL_INTERVAL = 0.1  # seconds
 def speak_text(text: str) -> None:
     """
     Wrapper to handle synthesis and playback based on configuration.
-    
+
     Args:
         text: Text to synthesize and speak
     """
@@ -39,9 +39,9 @@ def speak_text(text: str) -> None:
     should_buffer = config.get("buffer_audio", False)
 
     output_path = _get_output_path(ext, should_buffer)
-    
+
     success = _synthesize_audio(text, output_path, mode)
-    
+
     if success:
         if should_buffer:
             print(f"✅ Audio buffered to {output_path}.")
@@ -58,6 +58,7 @@ def _get_output_path(ext: str, should_buffer: bool) -> str:
     else:
         fd, output_path = tempfile.mkstemp(suffix=f".{ext}")
         import os
+
         os.close(fd)  # Close file descriptor
         return output_path
 
@@ -73,15 +74,16 @@ def _synthesize_audio(text: str, output_path: str, mode: str) -> bool:
 # Google Cloud TTS
 # ---------------------------------------------------------------------------
 
+
 def synthesize_audio_google(text: str, output_path: str) -> bool:
     """
     Synthesize speech using Google Cloud Text-to-Speech API.
     Handles texts longer than 5000 bytes by chunking.
-    
+
     Args:
         text: Text to synthesize
         output_path: Path to save the audio file
-        
+
     Returns:
         True if successful, False otherwise
     """
@@ -102,7 +104,9 @@ def synthesize_audio_google(text: str, output_path: str) -> bool:
 
         print(f"🎙️ Synthesizing with Google Cloud TTS (Voice: {voice_name})...")
 
-        credentials = service_account.Credentials.from_service_account_file(str(key_path))
+        credentials = service_account.Credentials.from_service_account_file(
+            str(key_path)
+        )
         client = texttospeech.TextToSpeechClient(credentials=credentials)
 
         voice = texttospeech.VoiceSelectionParams(
@@ -135,7 +139,9 @@ def _synthesize_chunks(client, chunks: List[str], voice, audio_config) -> List[b
     for i, chunk in enumerate(chunks):
         if len(chunks) > 1:
             chunk_size = len(chunk.encode("utf-8"))
-            print(f"  📝 Processing chunk {i + 1}/{len(chunks)} ({chunk_size} bytes)...")
+            print(
+                f"  📝 Processing chunk {i + 1}/{len(chunks)} ({chunk_size} bytes)..."
+            )
 
         synthesis_input = texttospeech.SynthesisInput(text=chunk)
         response = client.synthesize_speech(
@@ -149,11 +155,11 @@ def _split_text_for_tts(text: str, max_bytes: int) -> List[str]:
     """
     Split text into chunks that fit within max_bytes (UTF-8).
     Splits on sentence boundaries when possible.
-    
+
     Args:
         text: Text to split
         max_bytes: Maximum bytes per chunk
-        
+
     Returns:
         List of text chunks
     """
@@ -162,12 +168,14 @@ def _split_text_for_tts(text: str, max_bytes: int) -> List[str]:
         return [text]
 
     chunks = []
-    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = re.split(r"(?<=[.!?])\s+", text)
     current_chunk = ""
 
     for sentence in sentences:
-        test_chunk = (f"{current_chunk} {sentence}").strip() if current_chunk else sentence
-        
+        test_chunk = (
+            (f"{current_chunk} {sentence}").strip() if current_chunk else sentence
+        )
+
         if len(test_chunk.encode("utf-8")) <= max_bytes:
             current_chunk = test_chunk
         else:
@@ -188,7 +196,7 @@ def _split_long_sentence(sentence: str, max_bytes: int, chunks: List[str]) -> st
 
     words = sentence.split()
     current_chunk = ""
-    
+
     for word in words:
         test_word = f"{current_chunk} {word}".strip() if current_chunk else word
         if len(test_word.encode("utf-8")) <= max_bytes:
@@ -197,7 +205,7 @@ def _split_long_sentence(sentence: str, max_bytes: int, chunks: List[str]) -> st
             if current_chunk:
                 chunks.append(current_chunk)
             current_chunk = word
-    
+
     return current_chunk
 
 
@@ -205,14 +213,15 @@ def _split_long_sentence(sentence: str, max_bytes: int, chunks: List[str]) -> st
 # Local Chatterbox TTS
 # ---------------------------------------------------------------------------
 
+
 def synthesize_audio_local(text: str, output_path: str) -> bool:
     """
     Send text to local Chatterbox TTS API and save to output_path.
-    
+
     Args:
         text: Text to synthesize
         output_path: Path to save the audio file
-        
+
     Returns:
         True if successful, False otherwise
     """
@@ -260,7 +269,9 @@ def _sanitize_text(text: str) -> str:
 def _adjust_url_for_long_text(url: str, text_length: int) -> str:
     """Adjust URL to use /long endpoint for long texts."""
     if text_length >= LOCAL_TTS_LONG_TEXT_THRESHOLD and not url.endswith("/long"):
-        print(f"INFO: Text length {text_length} >= {LOCAL_TTS_LONG_TEXT_THRESHOLD}. Using /long endpoint.")
+        print(
+            f"INFO: Text length {text_length} >= {LOCAL_TTS_LONG_TEXT_THRESHOLD}. Using /long endpoint."
+        )
         return f"{url.rstrip('/')}/long"
     return url
 
@@ -296,26 +307,53 @@ def _save_audio_stream(response, output_path: str) -> None:
 # Audio Playback
 # ---------------------------------------------------------------------------
 
-def play_and_delete(file_path: str) -> None:
+
+def _play_audio_file(file_path: str) -> None:
     """
-    Plays the audio file using pygame and deletes it afterwards.
+    Core audio playback logic using pygame.
     Designed to run in a thread.
-    
+
+    Args:
+        file_path: Path to the audio file to play
+    """
+    print(f"🔊 Playing audio: {file_path}")
+    pygame.mixer.init()
+    pygame.mixer.music.load(file_path)
+    pygame.mixer.music.play()
+
+    while pygame.mixer.music.get_busy():
+        time.sleep(AUDIO_POLL_INTERVAL)
+
+    pygame.mixer.quit()
+
+
+def play_audio(file_path: str) -> None:
+    """
+    Plays the audio file using pygame without deleting it.
+    Designed to run in a thread.
+
     Args:
         file_path: Path to the audio file to play
     """
     try:
-        print(f"🔊 Playing audio: {file_path}")
-        pygame.mixer.init()
-        pygame.mixer.music.load(file_path)
-        pygame.mixer.music.play()
+        _play_audio_file(file_path)
+    except ImportError:
+        print("❌ Error: pygame is not installed.")
+    except Exception as e:
+        print(f"❌ Error playing audio: {e}")
 
-        while pygame.mixer.music.get_busy():
-            time.sleep(AUDIO_POLL_INTERVAL)
 
-        pygame.mixer.quit()
+def play_and_delete(file_path: str) -> None:
+    """
+    Plays the audio file using pygame and deletes it afterwards.
+    Designed to run in a thread.
+
+    Args:
+        file_path: Path to the audio file to play
+    """
+    try:
+        _play_audio_file(file_path)
         _delete_file(file_path)
-
     except ImportError:
         print("❌ Error: pygame is not installed.")
     except Exception as e:
@@ -326,6 +364,7 @@ def _delete_file(file_path: str) -> None:
     """Delete a file, handling errors gracefully."""
     try:
         import os
+
         os.remove(file_path)
         print(f"🗑️  Deleted played file: {file_path}")
     except Exception as e:
