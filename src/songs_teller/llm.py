@@ -102,7 +102,10 @@ def _llm_google(model: str, prompt: str) -> Optional[str]:
         model=model, google_api_key=api_key, temperature=0.7
     )
     response = llm_client.invoke(prompt)
-    return response.content if hasattr(response, "content") else str(response)
+    content = response.content if hasattr(response, "content") else str(response)
+    if isinstance(content, list):
+        content = " ".join(block["text"] for block in content if block.get("type") == "text")
+    return content
 
 
 def _llm_local(model: str, mode_config: Dict, prompt: str) -> Optional[str]:
