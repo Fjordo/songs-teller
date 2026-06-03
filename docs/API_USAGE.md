@@ -1,18 +1,36 @@
-# Song Teller API - Quick Start
+# Song Teller API — Quick Start
 
 ## Installation
 
 ```bash
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
 
 ## Running the API Server
 
 ```bash
-python song_teller_api.py
+python scripts/run.py
 ```
 
-The server will start on `http://localhost:5000`
+The server starts on `http://localhost:5000` (all interfaces — restrict with
+`host="127.0.0.1"` in `api.py` if only local access is needed).
+
+## Authentication
+
+Authentication is **optional**. Set the `API_KEY` environment variable to enable it:
+
+```env
+API_KEY=your-secret-key
+```
+
+When set, every request must include the header:
+
+```http
+X-Api-Key: your-secret-key
+```
+
+Requests missing or carrying an incorrect key receive **401 Unauthorized**.
+When `API_KEY` is not set the server operates in open/dev mode with no auth.
 
 ## API Endpoints
 
@@ -20,7 +38,13 @@ The server will start on `http://localhost:5000`
 
 Add a song to the current session.
 
-**Request:**
+**Request headers (when `API_KEY` is set):**
+
+```http
+X-Api-Key: your-secret-key
+```
+
+**Request body:**
 
 ```json
 {
@@ -29,7 +53,9 @@ Add a song to the current session.
 }
 ```
 
-**Response:**
+Both fields are required and must not exceed **200 characters**.
+
+**Response — success:**
 
 ```json
 {
@@ -39,16 +65,30 @@ Add a song to the current session.
 }
 ```
 
+**Response — duplicate:**
+
+```json
+{
+  "status": "skipped",
+  "message": "Song already in session",
+  "total_songs": 1
+}
+```
+
+---
+
 ### POST /api/session/reset
 
-Reset the current session and process songs.
+Reset the current session. When `process` is `true` (the default) the server
+snapshots the song list, resets the session immediately (returning **200**),
+then processes the songs via LLM and TTS **asynchronously** in the background.
 
-**Request:**
+**Request body (all fields optional):**
 
 ```json
 {
   "process": true,
-  "play_opening_audio": true
+  "play_opening_audio": false
 }
 ```
 
@@ -61,6 +101,8 @@ Reset the current session and process songs.
   "songs_processed": 3
 }
 ```
+
+---
 
 ### GET /api/session/status
 
@@ -83,20 +125,35 @@ Get current session status.
 }
 ```
 
-## How It Works
+---
 
-1. **Start API Server**: Run `song_teller_api.py` - it listens for song data
-2. **LLM Integration**: Extend `song_teller_api.py` to query an LLM about the songs
+### POST /api/llm/context/reset
 
-## Extending with LLM
+Force-unload the local Ollama model to free VRAM and clear its context.
+Only relevant when `mode` is `"local"` in `config.json`.
 
-In `song_teller_api.py`, find the `reset_session()` function and add your LLM integration:
+**Response:**
 
-```python
-# TODO: Add LLM processing here
-# Example:
-for song in current_session['songs']:
-    prompt = f"Tell me about {song['artist']} - {song['title']}"
-    response = your_llm.query(prompt)
-    print(response)
+```json
+{
+  "status": "success",
+  "message": "LLM context reset"
+}
 ```
+
+---
+
+## Configuration
+
+Edit `config/config.json` to switch between Google (cloud) and local modes:
+
+```json
+{
+  "mode": "google",
+  "save_session": false,
+  "play_audio": true,
+  "buffer_audio": false
+}
+```
+
+See `config/.env.example` for all environment variables.
