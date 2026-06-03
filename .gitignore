@@ -41,12 +41,14 @@ config/*.json
 songs-teller-*.json
 google_cloud_tts_key.json
 
-# Audio files
+# Audio files (generated/temporary — keep assets tracked separately)
 *.wav
-*.mp3
 buffered_commentary.*
 playing_commentary.*
-!**/audio/opening.mp3
+
+# Ignore loose mp3 files but keep the bundled assets
+*.mp3
+!assets/**/*.mp3
 
 # Session files
 song_session_*.json

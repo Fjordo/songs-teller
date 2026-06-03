@@ -15,7 +15,10 @@
 		"search.exclude": {
 			"**/node_modules": true,
 			"**/bower_components": true,
-			"**/*.code-search": true
+			"**/*.code-search": true,
+			"**/.venv": true,
+			"**/.pytest_cache": true,
+			"**/__pycache__": true
 		},
 		"editor.formatOnSave": true,
 		"[python]": {
