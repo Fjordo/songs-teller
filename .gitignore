@@ -26,6 +26,10 @@ env/
 *.swo
 *~
 
+# Tools
+.benchmarks/
+.claude/
+
 # Logs
 *.log
 logs/
