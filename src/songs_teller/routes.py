@@ -3,10 +3,10 @@ Flask route handlers for Song Teller API.
 """
 
 import json
+import os
 import shutil
 import threading
 from datetime import datetime
-
 from typing import Any, Dict, List, Optional
 
 from flask import Flask, jsonify, request
@@ -39,6 +39,20 @@ def register_routes(app: Flask) -> None:
     Args:
         app: Flask application instance
     """
+
+    @app.before_request
+    def _check_api_key():
+        """Reject requests that don't carry a valid X-Api-Key header.
+
+        Authentication is only enforced when the API_KEY environment variable
+        is set. When it is absent the server operates in open/dev mode.
+        """
+        expected = os.environ.get("API_KEY")
+        if not expected:
+            return  # dev mode — no auth required
+        provided = request.headers.get("X-Api-Key")
+        if not provided or provided != expected:
+            return jsonify({"error": "Unauthorized"}), 401
 
     @app.route("/api/song", methods=["POST"])
     def add_song():

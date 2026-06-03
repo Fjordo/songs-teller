@@ -3,6 +3,7 @@ Tests for Flask API routes.
 """
 
 import json
+import os
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
@@ -273,6 +274,43 @@ class TestResetSession:
         if routes._last_llm_thread:
             routes._last_llm_thread.join(timeout=5.0)
         mock_llm.assert_called_once()
+
+
+class TestAuthentication:
+    """Tests for optional API key authentication."""
+
+    @patch.dict(os.environ, {"API_KEY": "test-secret-key"})
+    def test_missing_key_returns_401(self, client):
+        """Requests without X-Api-Key header are rejected when API_KEY is set."""
+        response = client.get("/api/session/status")
+        assert response.status_code == 401
+        data = json.loads(response.data)
+        assert data["error"] == "Unauthorized"
+
+    @patch.dict(os.environ, {"API_KEY": "test-secret-key"})
+    def test_valid_key_passes(self, client):
+        """Requests with the correct X-Api-Key header are accepted."""
+        response = client.get(
+            "/api/session/status",
+            headers={"X-Api-Key": "test-secret-key"},
+        )
+        assert response.status_code == 200
+
+    @patch.dict(os.environ, {"API_KEY": "test-secret-key"})
+    def test_wrong_key_returns_401(self, client):
+        """Requests with an incorrect key are rejected."""
+        response = client.get(
+            "/api/session/status",
+            headers={"X-Api-Key": "wrong-key"},
+        )
+        assert response.status_code == 401
+
+    def test_no_auth_without_env_var(self, client):
+        """When API_KEY is not set the server accepts requests without a key."""
+        env = {k: v for k, v in os.environ.items() if k != "API_KEY"}
+        with patch.dict(os.environ, env, clear=True):
+            response = client.get("/api/session/status")
+        assert response.status_code == 200
 
 
 class TestResetLLMContext:
