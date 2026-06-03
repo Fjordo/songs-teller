@@ -1,7 +1,7 @@
 {
     "mode": "google",
     "local": {
-        "llm_api_url": "http://stepuntu:11434/api/generate",
+        "llm_api_url": "http://stepuntu:11434",
         "llm_model": "llama3.1",
         "tts_api_url": "http://stepuntu:4123/v1/audio/speech",
         "tts_voice": "alloy",
