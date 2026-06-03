@@ -2,6 +2,7 @@
 LLM integration — Google Gemini and local Ollama.
 """
 
+import logging
 import os
 from typing import Dict, List, Optional
 
@@ -11,6 +12,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from songs_teller.config import config
 from songs_teller.tts import speak_text
 from songs_teller.utils import get_config_path, normalize_ollama_url
+
+logger = logging.getLogger(__name__)
 
 # Constants
 DEFAULT_MODE = "google"
@@ -25,7 +28,7 @@ def process_with_llm(songs: List[Dict[str, str]]) -> None:
     """
     Send the list of songs to the configured LLM for processing.
     Dispatches to Google Gemini or local Ollama based on config mode.
-    
+
     Args:
         songs: List of song dictionaries with 'artist' and 'title' keys
     """
@@ -43,11 +46,11 @@ def process_with_llm(songs: List[Dict[str, str]]) -> None:
         final_prompt = prompt_template.replace("{songs_list}", songs_list_str)
 
         content = _call_llm(mode, model, mode_config, final_prompt)
-        
+
         if content:
             _display_and_speak(content)
     except Exception as e:
-        print(f"❌ Error in process_with_llm: {e}")
+        logger.error("Error in process_with_llm: %s", e)
 
 
 def _load_prompt_template(prompt_file: str) -> str:
@@ -56,9 +59,9 @@ def _load_prompt_template(prompt_file: str) -> str:
         prompt_path = get_config_path(prompt_file)
         if prompt_path.exists():
             return prompt_path.read_text(encoding="utf-8")
-        print(f"⚠️  Prompt file not found at: {prompt_path}")
+        logger.warning("Prompt file not found at: %s", prompt_path)
     except Exception as e:
-        print(f"⚠️  Could not read prompt file: {e}")
+        logger.warning("Could not read prompt file: %s", e)
     return DEFAULT_PROMPT_TEMPLATE
 
 
@@ -75,7 +78,7 @@ def _call_llm(mode: str, model: str, mode_config: Dict, prompt: str) -> Optional
 
 
 def _display_and_speak(content: str) -> None:
-    """Display LLM content and speak it if enabled."""
+    """Display LLM content to stdout and synthesise audio if enabled."""
     print(f"\n{'=' * 20} LLM Analysis {'=' * 20}\n")
     print(content)
     print(f"\n{'=' * 54}\n")
@@ -85,20 +88,20 @@ def _display_and_speak(content: str) -> None:
 def _llm_google(model: str, prompt: str) -> Optional[str]:
     """
     Call Google Gemini via LangChain.
-    
+
     Args:
         model: Model name to use
         prompt: The prompt to send
-        
+
     Returns:
         LLM response content or None if error
     """
     api_key = os.environ.get("GOOGLE_AI_STUDIO_API_KEY")
     if not api_key:
-        print("❌ Error: GOOGLE_AI_STUDIO_API_KEY not found in .env. Please set it to use Google LLM.")
+        logger.error("GOOGLE_AI_STUDIO_API_KEY not found in environment. Please set it to use Google LLM.")
         return None
 
-    print(f"🤖 Sending request to Google Gemini ({model})...")
+    logger.info("Sending request to Google Gemini (%s)...", model)
     llm_client = ChatGoogleGenerativeAI(
         model=model, google_api_key=api_key, temperature=0.7
     )
@@ -112,20 +115,20 @@ def _llm_google(model: str, prompt: str) -> Optional[str]:
 def _llm_local(model: str, mode_config: Dict, prompt: str) -> Optional[str]:
     """
     Call local Ollama LLM via REST API.
-    
+
     Args:
         model: Model name to use
         mode_config: Configuration dictionary for local mode
         prompt: The prompt to send
-        
+
     Returns:
         LLM response content or None if error
     """
     base_url = mode_config.get("llm_api_url", "http://localhost:11434")
     base_url = normalize_ollama_url(base_url)
-    
+
     url = f"{base_url}/api/generate"
-    print(f"🤖 Sending request to Ollama ({model}) at {base_url}...")
+    logger.info("Sending request to Ollama (%s) at %s...", model, base_url)
 
     try:
         response = requests.post(
@@ -136,18 +139,18 @@ def _llm_local(model: str, mode_config: Dict, prompt: str) -> Optional[str]:
         response.raise_for_status()
         return response.json().get("response", "")
     except requests.RequestException as e:
-        print(f"❌ Error calling Ollama: {e}")
+        logger.error("Error calling Ollama: %s", e)
         return None
 
 
 def force_unload_model(base_url: str, model: str) -> bool:
     """
     Force unload Ollama model to clear context.
-    
+
     Args:
         base_url: Base URL of Ollama API
         model: Model name to unload
-        
+
     Returns:
         True if successful, False otherwise
     """
@@ -156,9 +159,9 @@ def force_unload_model(base_url: str, model: str) -> bool:
         url = f"{base_url}/api/generate"
         payload = {"model": model, "keep_alive": 0}
 
-        print(f"🧠 Unloading model {model}...")
+        logger.info("Unloading model %s...", model)
         requests.post(url, json=payload, timeout=HTTP_TIMEOUT)
         return True
     except Exception as e:
-        print(f"⚠️ Error unloading model: {e}")
+        logger.warning("Error unloading model: %s", e)
         return False

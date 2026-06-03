@@ -3,12 +3,15 @@ Text-to-Speech synthesis and audio playback.
 """
 
 import io
+import logging
 import os
 import re
 import tempfile
 import time
 import wave
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 import pygame
 import requests
@@ -49,7 +52,7 @@ def speak_text(text: str) -> None:
 
     if success:
         if should_buffer:
-            print(f"✅ Audio buffered to {output_path}.")
+            logger.info("Audio buffered to %s.", output_path)
         else:
             play_and_delete(str(output_path))
 
@@ -58,7 +61,7 @@ def _get_output_path(ext: str, should_buffer: bool) -> str:
     """Get output path for audio file."""
     if should_buffer:
         output_path = get_project_root() / f"buffered_commentary.{ext}"
-        print("INFO: Buffering enabled. Generating audio for NEXT session...")
+        logger.info("Buffering enabled. Generating audio for NEXT session...")
         return str(output_path)
     else:
         fd, output_path = tempfile.mkstemp(suffix=f".{ext}")
@@ -97,15 +100,15 @@ def synthesize_audio_google(text: str, output_path: str) -> bool:
         tts_key_path = google_config.get("tts_key_path")
 
         if not tts_key_path:
-            print("❌ Error: google.tts_key_path not set in config.json.")
+            logger.error("google.tts_key_path not set in config.json.")
             return False
 
         key_path = get_config_path(tts_key_path)
         if not key_path.exists():
-            print(f"❌ Error: Key file not found at {key_path}")
+            logger.error("Key file not found at %s", key_path)
             return False
 
-        print(f"🎙️ Synthesizing with Google Cloud TTS (Voice: {voice_name})...")
+        logger.info("Synthesizing with Google Cloud TTS (Voice: %s)...", voice_name)
 
         credentials = service_account.Credentials.from_service_account_file(
             str(key_path)
@@ -125,11 +128,11 @@ def synthesize_audio_google(text: str, output_path: str) -> bool:
 
         _concatenate_audio_parts(audio_parts, output_path)
 
-        print(f"💾 Audio saved to {output_path}")
+        logger.info("Audio saved to %s", output_path)
         return True
 
     except Exception as e:
-        print(f"❌ Error in Google Cloud TTS: {e}")
+        logger.error("Error in Google Cloud TTS: %s", e)
         return False
 
 
@@ -139,9 +142,7 @@ def _synthesize_chunks(client, chunks: List[str], voice, audio_config) -> List[b
     for i, chunk in enumerate(chunks):
         if len(chunks) > 1:
             chunk_size = len(chunk.encode("utf-8"))
-            print(
-                f"  📝 Processing chunk {i + 1}/{len(chunks)} ({chunk_size} bytes)..."
-            )
+            logger.info("Processing chunk %d/%d (%d bytes)...", i + 1, len(chunks), chunk_size)
 
         synthesis_input = texttospeech.SynthesisInput(text=chunk)
         response = client.synthesize_speech(
@@ -172,7 +173,7 @@ def _concatenate_audio_parts(audio_parts: List[bytes], output_path: str) -> None
                             out_wav.setparams(in_wav.getparams())
                         out_wav.writeframes(in_wav.readframes(in_wav.getnframes()))
     except wave.Error:
-        print("⚠️  WAV merge failed, falling back to raw concatenation.")
+        logger.warning("WAV merge failed, falling back to raw concatenation.")
         with open(output_path, "wb") as f:
             for part in audio_parts:
                 f.write(part)
@@ -259,27 +260,27 @@ def synthesize_audio_local(text: str, output_path: str) -> bool:
         tts_options = local_config.get("tts_options", {})
 
         if not tts_url:
-            print("⚠️  Local TTS URL not configured in config.local.tts_api_url")
+            logger.warning("Local TTS URL not configured in config.local.tts_api_url")
             return False
 
         text = _sanitize_text(text)
         tts_url = _adjust_url_for_long_text(tts_url, len(text))
 
-        print(f"🗣️  Synthesizing audio via {tts_url}...")
+        logger.info("Synthesizing audio via %s...", tts_url)
 
         payload = _build_tts_payload(text, tts_voice, tts_options)
         response = requests.post(tts_url, json=payload, stream=True, timeout=HTTP_TIMEOUT)
 
         if response.status_code == 200:
             _save_audio_stream(response, output_path)
-            print(f"💾 Audio saved to {output_path}")
+            logger.info("Audio saved to %s", output_path)
             return True
         else:
-            print(f"❌ TTS Request failed: {response.status_code} - {response.text}")
+            logger.error("TTS request failed: %s - %s", response.status_code, response.text)
             return False
 
     except Exception as e:
-        print(f"❌ Error in local TTS: {e}")
+        logger.error("Error in local TTS: %s", e)
         return False
 
 
@@ -296,8 +297,9 @@ def _sanitize_text(text: str) -> str:
 def _adjust_url_for_long_text(url: str, text_length: int) -> str:
     """Adjust URL to use /long endpoint for long texts."""
     if text_length >= LOCAL_TTS_LONG_TEXT_THRESHOLD and not url.endswith("/long"):
-        print(
-            f"INFO: Text length {text_length} >= {LOCAL_TTS_LONG_TEXT_THRESHOLD}. Using /long endpoint."
+        logger.info(
+            "Text length %d >= %d. Using /long endpoint.",
+            text_length, LOCAL_TTS_LONG_TEXT_THRESHOLD,
         )
         return f"{url.rstrip('/')}/long"
     return url
@@ -351,7 +353,7 @@ def _play_audio_file(file_path: str) -> None:
     Args:
         file_path: Path to the audio file to play
     """
-    print(f"🔊 Playing audio: {file_path}")
+    logger.info("Playing audio: %s", file_path)
     _ensure_mixer()
     pygame.mixer.music.load(file_path)
     pygame.mixer.music.play()
@@ -371,9 +373,9 @@ def play_audio(file_path: str) -> None:
     try:
         _play_audio_file(file_path)
     except ImportError:
-        print("❌ Error: pygame is not installed.")
+        logger.error("pygame is not installed.")
     except Exception as e:
-        print(f"❌ Error playing audio: {e}")
+        logger.error("Error playing audio: %s", e)
 
 
 def play_and_delete(file_path: str) -> None:
@@ -388,15 +390,15 @@ def play_and_delete(file_path: str) -> None:
         _play_audio_file(file_path)
         _delete_file(file_path)
     except ImportError:
-        print("❌ Error: pygame is not installed.")
+        logger.error("pygame is not installed.")
     except Exception as e:
-        print(f"❌ Error playing audio: {e}")
+        logger.error("Error playing audio: %s", e)
 
 
 def _delete_file(file_path: str) -> None:
     """Delete a file, handling errors gracefully."""
     try:
         os.remove(file_path)
-        print(f"🗑️  Deleted played file: {file_path}")
+        logger.info("Deleted played file: %s", file_path)
     except Exception as e:
-        print(f"⚠️ Warning: Could not delete {file_path}: {e}")
+        logger.warning("Could not delete %s: %s", file_path, e)

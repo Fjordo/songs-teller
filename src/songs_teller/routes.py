@@ -3,6 +3,7 @@ Flask route handlers for Song Teller API.
 """
 
 import json
+import logging
 import os
 import shutil
 import threading
@@ -15,6 +16,8 @@ from songs_teller.config import config
 from songs_teller.llm import force_unload_model, process_with_llm
 from songs_teller.tts import play_and_delete, play_audio
 from songs_teller.utils import get_project_root
+
+logger = logging.getLogger(__name__)
 
 MAX_FIELD_LENGTH = 200  # max characters for artist / title fields
 
@@ -66,7 +69,6 @@ def register_routes(app: Flask) -> None:
         }
         """
         try:
-            # Try to parse JSON, return 400 if parsing fails
             data = request.get_json(force=True, silent=True)
 
             if data is None:
@@ -102,7 +104,7 @@ def register_routes(app: Flask) -> None:
                 total = len(current_session["songs"])
 
             if not is_duplicate:
-                print(f"✅ Added: {artist} - {title} (Total: {total})")
+                logger.info("Added: %s - %s (Total: %d)", artist, title, total)
                 return jsonify(
                     {
                         "status": "success",
@@ -111,7 +113,7 @@ def register_routes(app: Flask) -> None:
                     }
                 ), 200
             else:
-                print(f"⏭️  Skipped duplicate: {artist} - {title}")
+                logger.info("Skipped duplicate: %s - %s", artist, title)
                 return jsonify(
                     {
                         "status": "skipped",
@@ -121,7 +123,7 @@ def register_routes(app: Flask) -> None:
                 ), 200
 
         except Exception as e:
-            print(f"❌ Error in add_song: {e}")
+            logger.error("Error in add_song: %s", e)
             return jsonify({"error": "Internal server error"}), 500
 
     @app.route("/api/session/reset", methods=["POST"])
@@ -131,8 +133,8 @@ def register_routes(app: Flask) -> None:
 
         Optional JSON body:
         {
-            "process": true,  // If true, process songs before resetting
-            "play_opening_audio": false  // If true, play opening audio after LLM invocation
+            "process": true,
+            "play_opening_audio": false
         }
         """
         global _last_llm_thread
@@ -147,22 +149,16 @@ def register_routes(app: Flask) -> None:
             song_count = len(songs_snapshot)
 
             if should_process and song_count > 0:
-                print(f"\n{'=' * 60}")
-                print(f"🔄 Closing Session with {song_count} songs")
-                print(f"{'=' * 60}\n")
+                logger.info("Closing session with %d songs", song_count)
 
-                # Save to file
                 if config.get("save_session", False):
                     _save_session_to_file(songs_snapshot)
 
                 _handle_buffered_audio()
 
-                # Play opening audio asynchronously before/during LLM invocation
                 if play_opening_audio:
-                    audio_thread = threading.Thread(target=_play_opening_audio)
-                    audio_thread.start()
+                    threading.Thread(target=_play_opening_audio, daemon=True).start()
 
-                # Run LLM in background so the HTTP response returns immediately
                 _last_llm_thread = threading.Thread(
                     target=process_with_llm, args=(songs_snapshot,), daemon=True
                 )
@@ -173,7 +169,7 @@ def register_routes(app: Flask) -> None:
                 current_session["started_at"] = None
                 current_session["last_updated"] = None
 
-            print(f"🔄 Session reset (processed {song_count} songs)\n")
+            logger.info("Session reset (processed %d songs)", song_count)
 
             return jsonify(
                 {
@@ -184,7 +180,7 @@ def register_routes(app: Flask) -> None:
             ), 200
 
         except Exception as e:
-            print(f"❌ Error in reset_session: {e}")
+            logger.error("Error in reset_session: %s", e)
             return jsonify({"error": "Internal server error"}), 500
 
     @app.route("/api/session/status", methods=["GET"])
@@ -201,26 +197,20 @@ def register_routes(app: Flask) -> None:
 
     @app.route("/api/llm/context/reset", methods=["POST"])
     def reset_llm_context():
-        """
-        Forces Ollama to unload the model, clearing context.
-        """
+        """Forces Ollama to unload the model, clearing context."""
         try:
             local_config = config.get("local", {})
             base_url = local_config.get("llm_api_url", "http://localhost:11434")
             model = local_config.get("llm_model", "llama3.1")
 
             if force_unload_model(base_url, model):
-                print("✅ LLM Context reset successful.")
-                return jsonify(
-                    {"status": "success", "message": "LLM context reset"}
-                ), 200
+                logger.info("LLM context reset successful.")
+                return jsonify({"status": "success", "message": "LLM context reset"}), 200
             else:
-                return jsonify(
-                    {"status": "error", "message": "Failed to reset context"}
-                ), 500
+                return jsonify({"status": "error", "message": "Failed to reset context"}), 500
 
         except Exception as e:
-            print(f"❌ Error resetting LLM context: {e}")
+            logger.error("Error resetting LLM context: %s", e)
             return jsonify({"status": "error", "message": "Internal server error"}), 500
 
 
@@ -237,7 +227,7 @@ def _handle_buffered_audio() -> None:
     buffer_file = base_path / f"buffered_commentary.{ext}"
 
     if not buffer_file.exists():
-        print("ℹ️  No buffered audio found. Nothing to play yet.")
+        logger.info("No buffered audio found. Nothing to play yet.")
         return
 
     playing_file = base_path / f"playing_commentary.{ext}"
@@ -245,20 +235,15 @@ def _handle_buffered_audio() -> None:
         try:
             playing_file.unlink()
         except Exception as e:
-            print(f"⚠️ Warning: Could not remove existing playing file: {e}")
+            logger.warning("Could not remove existing playing file: %s", e)
 
     shutil.move(str(buffer_file), str(playing_file))
-    print(f"🔊 Starting async playback of: {playing_file}")
+    logger.info("Starting async playback of: %s", playing_file)
     threading.Thread(target=play_and_delete, args=(str(playing_file),), daemon=True).start()
 
 
 def _save_session_to_file(songs: List[Dict]) -> None:
-    """
-    Save songs to a JSON file with timestamp.
-
-    Args:
-        songs: List of song dictionaries to save
-    """
+    """Save songs to a JSON file with timestamp."""
     try:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = get_project_root() / f"song_session_{timestamp}.json"
@@ -266,9 +251,9 @@ def _save_session_to_file(songs: List[Dict]) -> None:
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(songs, f, indent=2, ensure_ascii=False)
 
-        print(f"💾 Session saved to: {filename}")
+        logger.info("Session saved to: %s", filename)
     except Exception as e:
-        print(f"⚠️  Error saving to file: {e}")
+        logger.warning("Error saving session to file: %s", e)
 
 
 def _play_opening_audio() -> None:
@@ -279,17 +264,17 @@ def _play_opening_audio() -> None:
 
         opening_audio_path = config.get("opening_audio_path")
         if not opening_audio_path:
-            print("ℹ️  No opening_audio_path configured. Skipping opening audio.")
+            logger.info("No opening_audio_path configured. Skipping opening audio.")
             return
 
         audio_file = (get_project_root() / opening_audio_path).resolve()
 
         if not audio_file.exists():
-            print(f"⚠️  Opening audio file not found: {audio_file}")
+            logger.warning("Opening audio file not found: %s", audio_file)
             return
 
-        print(f"🎵 Playing opening audio from: {audio_file}")
+        logger.info("Playing opening audio from: %s", audio_file)
         play_audio(str(audio_file))
 
     except Exception as e:
-        print(f"⚠️  Error playing opening audio: {e}")
+        logger.warning("Error playing opening audio: %s", e)

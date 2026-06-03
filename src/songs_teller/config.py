@@ -3,12 +3,15 @@ Configuration loader for Song Teller.
 """
 
 import json
+import logging
 import os
 from typing import Any, Dict
 
 from dotenv import load_dotenv
 
 from songs_teller.utils import get_config_path
+
+logger = logging.getLogger(__name__)
 
 # Shared config dict — populated by load_config(), imported by other modules.
 config: Dict[str, Any] = {}
@@ -33,5 +36,5 @@ def load_config() -> Dict[str, Any]:
             with open(config_path, "r", encoding="utf-8") as f:
                 config.update(json.load(f))
     except Exception as e:
-        print(f"⚠️  Error loading config: {e}")
+        logger.warning("Error loading config: %s", e)
     return config
