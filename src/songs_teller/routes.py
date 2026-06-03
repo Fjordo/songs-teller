@@ -7,7 +7,7 @@ import shutil
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from flask import Flask, jsonify, request
 
@@ -17,7 +17,7 @@ from songs_teller.tts import play_and_delete, play_audio
 from songs_teller.utils import get_project_root
 
 # In-memory storage for current song session
-current_session: Dict[str, any] = {
+current_session: Dict[str, Any] = {
     "songs": [],
     "started_at": None,
     "last_updated": None,
