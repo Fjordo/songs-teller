@@ -2,6 +2,7 @@
 Text-to-Speech synthesis and audio playback.
 """
 
+import os
 import re
 import tempfile
 import time
@@ -57,9 +58,7 @@ def _get_output_path(ext: str, should_buffer: bool) -> str:
         return str(output_path)
     else:
         fd, output_path = tempfile.mkstemp(suffix=f".{ext}")
-        import os
-
-        os.close(fd)  # Close file descriptor
+        os.close(fd)
         return output_path
 
 
@@ -363,8 +362,6 @@ def play_and_delete(file_path: str) -> None:
 def _delete_file(file_path: str) -> None:
     """Delete a file, handling errors gracefully."""
     try:
-        import os
-
         os.remove(file_path)
         print(f"🗑️  Deleted played file: {file_path}")
     except Exception as e:
