@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Rome"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+    groups:
+      google:
+        patterns:
+          - "google-*"
+          - "langchain-google-*"
+      dev-tools:
+        patterns:
+          - "pytest*"
+          - "black"
+          - "flake8"
+          - "mypy"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Rome"
+    labels:
+      - "dependencies"
+      - "github-actions"
