@@ -46,7 +46,7 @@ dev = [
 ]
 
 [project.scripts]
-songs-teller = "songs_teller.api:create_app"
+songs-teller = "songs_teller.api:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

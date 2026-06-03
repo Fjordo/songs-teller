@@ -32,7 +32,8 @@ def create_app() -> Flask:
     return app
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Start the Songs Teller API server (console script entry point)."""
     app = create_app()
 
     mode = config.get("mode", "google")
@@ -46,15 +47,19 @@ if __name__ == "__main__":
         print(f"  LLM:   Google Gemini ({mode_config.get('llm_model', 'gemini-2.0-flash')})")
         print(f"  TTS:   Google Cloud TTS ({mode_config.get('tts_voice', 'en-US-Neural2-D')})")
     else:
-        print(f"  LLM:   Ollama ({mode_config.get('llm_model', 'gemma-3-27b-it')}) @ {mode_config.get('llm_api_url', 'http://localhost:11434')}")
+        print(f"  LLM:   Ollama ({mode_config.get('llm_model', 'llama3.1')}) @ {mode_config.get('llm_api_url', 'http://localhost:11434')}")
         print(f"  TTS:   Chatterbox @ {mode_config.get('tts_api_url', 'N/A')}")
     print(f"  Audio: {'ON' if config.get('play_audio') else 'OFF'} | Buffer: {'ON' if config.get('buffer_audio') else 'OFF'}")
     print(f"\nEndpoints:")
-    print("  POST /api/song            - Add a song to current session")
-    print("  POST /api/session/reset   - Reset session (process songs)")
-    print("  GET  /api/session/status  - Get current session status")
+    print("  POST /api/song              - Add a song to current session")
+    print("  POST /api/session/reset     - Reset session (process songs)")
+    print("  GET  /api/session/status    - Get current session status")
     print("  POST /api/llm/context/reset - Unload Ollama model (local mode)")
     print(f"\nServer starting on http://localhost:5000")
     print("=" * 60 + "\n")
 
     app.run(host="0.0.0.0", port=5000, debug=False)
+
+
+if __name__ == "__main__":
+    main()
