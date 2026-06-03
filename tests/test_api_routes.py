@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from songs_teller import routes
 from songs_teller.routes import current_session
 
 
@@ -207,7 +208,6 @@ class TestResetSession:
     @patch("songs_teller.routes.process_with_llm")
     def test_reset_session_with_songs_and_process(self, mock_llm, client, sample_songs):
         """Test resetting session with songs and processing."""
-        # Add songs
         for song in sample_songs:
             client.post(
                 "/api/song",
@@ -226,10 +226,12 @@ class TestResetSession:
         assert data["status"] == "success"
         assert data["songs_processed"] == len(sample_songs)
 
-        # Verify session was reset
+        # Session is reset before the LLM thread completes
         assert len(current_session["songs"]) == 0
 
-        # LLM should be called with the songs
+        # Wait for the background LLM thread then verify it was called correctly
+        if routes._last_llm_thread:
+            routes._last_llm_thread.join(timeout=5.0)
         mock_llm.assert_called_once()
         call_args = mock_llm.call_args[0][0]
         assert len(call_args) == len(sample_songs)
@@ -254,7 +256,6 @@ class TestResetSession:
     @patch("songs_teller.routes.process_with_llm")
     def test_reset_session_default_process(self, mock_llm, client, sample_songs):
         """Test resetting session with default process=True."""
-        # Add songs
         for song in sample_songs:
             client.post(
                 "/api/song",
@@ -262,7 +263,6 @@ class TestResetSession:
                 content_type="application/json",
             )
 
-        # Don't specify process parameter (should default to True)
         response = client.post(
             "/api/session/reset",
             data=json.dumps({}),
@@ -270,7 +270,8 @@ class TestResetSession:
         )
 
         assert response.status_code == 200
-        # LLM should be called
+        if routes._last_llm_thread:
+            routes._last_llm_thread.join(timeout=5.0)
         mock_llm.assert_called_once()
 
 

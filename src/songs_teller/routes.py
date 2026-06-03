@@ -28,6 +28,9 @@ current_session: Dict[str, Any] = {
 # Protects all reads and writes to current_session across threads
 _session_lock = threading.Lock()
 
+# Reference to the most recent LLM thread — used by tests to join before asserting
+_last_llm_thread: Optional[threading.Thread] = None
+
 
 def register_routes(app: Flask) -> None:
     """
@@ -118,6 +121,7 @@ def register_routes(app: Flask) -> None:
             "play_opening_audio": false  // If true, play opening audio after LLM invocation
         }
         """
+        global _last_llm_thread
         try:
             data = request.get_json() or {}
             should_process = data.get("process", True)
@@ -144,8 +148,11 @@ def register_routes(app: Flask) -> None:
                     audio_thread = threading.Thread(target=_play_opening_audio)
                     audio_thread.start()
 
-                # Query LLM about the songs/artists (Generates new buffer)
-                process_with_llm(songs_snapshot)
+                # Run LLM in background so the HTTP response returns immediately
+                _last_llm_thread = threading.Thread(
+                    target=process_with_llm, args=(songs_snapshot,), daemon=True
+                )
+                _last_llm_thread.start()
 
             with _session_lock:
                 current_session["songs"] = []
