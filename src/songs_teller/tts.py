@@ -2,10 +2,12 @@
 Text-to-Speech synthesis and audio playback.
 """
 
+import io
 import os
 import re
 import tempfile
 import time
+import wave
 from typing import List, Optional
 
 import pygame
@@ -119,10 +121,7 @@ def synthesize_audio_google(text: str, output_path: str) -> bool:
         chunks = _split_text_for_tts(text, GOOGLE_TTS_MAX_BYTES)
         audio_parts = _synthesize_chunks(client, chunks, voice, audio_config)
 
-        # Concatenate all audio parts
-        with open(output_path, "wb") as f:
-            for part in audio_parts:
-                f.write(part)
+        _concatenate_audio_parts(audio_parts, output_path)
 
         print(f"💾 Audio saved to {output_path}")
         return True
@@ -148,6 +147,33 @@ def _synthesize_chunks(client, chunks: List[str], voice, audio_config) -> List[b
         )
         audio_parts.append(response.audio_content)
     return audio_parts
+
+
+def _concatenate_audio_parts(audio_parts: List[bytes], output_path: str) -> None:
+    """
+    Write audio parts to file. When multiple WAV chunks are present, merges
+    them via the wave module so the result has a single valid RIFF header.
+    Falls back to raw concatenation if the wave module cannot parse the data.
+    """
+    if len(audio_parts) == 1:
+        with open(output_path, "wb") as f:
+            f.write(audio_parts[0])
+        return
+
+    try:
+        buffers = [io.BytesIO(part) for part in audio_parts]
+        with open(output_path, "wb") as out_file:
+            with wave.open(out_file, "wb") as out_wav:
+                for i, buf in enumerate(buffers):
+                    with wave.open(buf, "rb") as in_wav:
+                        if i == 0:
+                            out_wav.setparams(in_wav.getparams())
+                        out_wav.writeframes(in_wav.readframes(in_wav.getnframes()))
+    except wave.Error:
+        print("⚠️  WAV merge failed, falling back to raw concatenation.")
+        with open(output_path, "wb") as f:
+            for part in audio_parts:
+                f.write(part)
 
 
 def _split_text_for_tts(text: str, max_bytes: int) -> List[str]:

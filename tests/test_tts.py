@@ -2,8 +2,10 @@
 Tests for Text-to-Speech integration.
 """
 
+import io
 import os
 import tempfile
+import wave
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -299,6 +301,50 @@ class TestSynthesizeAudioLocal:
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
+
+
+class TestConcatenateAudioParts:
+    """Tests for _concatenate_audio_parts function."""
+
+    def _make_wav_bytes(self, num_frames: int = 100) -> bytes:
+        """Create minimal valid WAV bytes for testing."""
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(22050)
+            w.writeframes(b"\x00\x00" * num_frames)
+        return buf.getvalue()
+
+    def test_single_chunk_written_as_is(self, tmp_path):
+        """A single audio part is written directly without WAV processing."""
+        data = b"raw audio bytes"
+        output = str(tmp_path / "out.wav")
+        tts._concatenate_audio_parts([data], output)
+        with open(output, "rb") as f:
+            assert f.read() == data
+
+    def test_multiple_wav_chunks_produce_valid_wav(self, tmp_path):
+        """Multiple WAV chunks are merged into a single valid WAV file."""
+        chunk1 = self._make_wav_bytes(50)
+        chunk2 = self._make_wav_bytes(75)
+        output = str(tmp_path / "merged.wav")
+
+        tts._concatenate_audio_parts([chunk1, chunk2], output)
+
+        with wave.open(output, "rb") as w:
+            assert w.getnframes() == 125  # 50 + 75
+
+    def test_multiple_chunks_fallback_on_invalid_wav(self, tmp_path):
+        """Falls back to raw concatenation when chunks are not valid WAV."""
+        chunk1 = b"not a wav header part1"
+        chunk2 = b"not a wav header part2"
+        output = str(tmp_path / "out.bin")
+
+        tts._concatenate_audio_parts([chunk1, chunk2], output)
+
+        with open(output, "rb") as f:
+            assert f.read() == chunk1 + chunk2
 
 
 class TestSplitTextForTTS:
