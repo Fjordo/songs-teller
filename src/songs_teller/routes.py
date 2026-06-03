@@ -6,7 +6,7 @@ import json
 import shutil
 import threading
 from datetime import datetime
-from pathlib import Path
+
 from typing import Any, Dict, List, Optional
 
 from flask import Flask, jsonify, request
@@ -253,10 +253,7 @@ def _save_session_to_file(songs: List[Dict]) -> None:
 
 
 def _play_opening_audio() -> None:
-    """
-    Play the opening audio file immediately after LLM invocation completes.
-    Path is resolved relative to the api.py module directory.
-    """
+    """Play the opening audio file. Path is resolved relative to the project root."""
     try:
         if not config.get("play_audio", False):
             return
@@ -266,11 +263,7 @@ def _play_opening_audio() -> None:
             print("ℹ️  No opening_audio_path configured. Skipping opening audio.")
             return
 
-        # Resolve path relative to api.py directory
-        from songs_teller import api as api_module
-
-        api_dir = Path(api_module.__file__).parent
-        audio_file = (api_dir / opening_audio_path).resolve()
+        audio_file = (get_project_root() / opening_audio_path).resolve()
 
         if not audio_file.exists():
             print(f"⚠️  Opening audio file not found: {audio_file}")
