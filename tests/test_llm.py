@@ -188,6 +188,21 @@ class TestLLMLocal:
         result = llm._llm_local("llama3.1", mode_config, "Test prompt")
         assert result is None
 
+    @patch("songs_teller.llm.requests.post")
+    def test_llm_local_passes_timeout(self, mock_post):
+        """Verify timeout is passed to requests.post."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"response": "ok"}
+        mock_response.raise_for_status = MagicMock()
+        mock_post.return_value = mock_response
+
+        mode_config = {"llm_api_url": "http://localhost:11434"}
+        llm._llm_local("llama3.1", mode_config, "prompt")
+
+        _, kwargs = mock_post.call_args
+        assert "timeout" in kwargs
+        assert kwargs["timeout"] == llm.HTTP_TIMEOUT
+
 
 class TestForceUnloadModel:
     """Tests for force_unload_model function."""

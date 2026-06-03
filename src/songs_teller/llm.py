@@ -18,6 +18,7 @@ DEFAULT_GOOGLE_MODEL = "gemini-2.0-flash"
 DEFAULT_LOCAL_MODEL = "llama3.1"
 DEFAULT_PROMPT_FILE = "prompt.txt"
 DEFAULT_PROMPT_TEMPLATE = "Analyze these songs:\n{songs_list}"
+HTTP_TIMEOUT = 240  # seconds — max wait for LLM server response
 
 
 def process_with_llm(songs: List[Dict[str, str]]) -> None:
@@ -130,6 +131,7 @@ def _llm_local(model: str, mode_config: Dict, prompt: str) -> Optional[str]:
         response = requests.post(
             url,
             json={"model": model, "prompt": prompt, "stream": False},
+            timeout=HTTP_TIMEOUT,
         )
         response.raise_for_status()
         return response.json().get("response", "")
@@ -155,7 +157,7 @@ def force_unload_model(base_url: str, model: str) -> bool:
         payload = {"model": model, "keep_alive": 0}
 
         print(f"🧠 Unloading model {model}...")
-        requests.post(url, json=payload)
+        requests.post(url, json=payload, timeout=HTTP_TIMEOUT)
         return True
     except Exception as e:
         print(f"⚠️ Error unloading model: {e}")

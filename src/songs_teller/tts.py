@@ -24,6 +24,7 @@ _mixer_initialized = False  # pygame mixer lifecycle — init once, never quit m
 GOOGLE_TTS_MAX_BYTES = 4500  # Leave margin below 5000 byte limit
 LOCAL_TTS_LONG_TEXT_THRESHOLD = 3000
 AUDIO_POLL_INTERVAL = 0.1  # seconds
+HTTP_TIMEOUT = 240  # seconds — max wait for TTS server response
 
 
 def speak_text(text: str) -> None:
@@ -267,7 +268,7 @@ def synthesize_audio_local(text: str, output_path: str) -> bool:
         print(f"🗣️  Synthesizing audio via {tts_url}...")
 
         payload = _build_tts_payload(text, tts_voice, tts_options)
-        response = requests.post(tts_url, json=payload, stream=True)
+        response = requests.post(tts_url, json=payload, stream=True, timeout=HTTP_TIMEOUT)
 
         if response.status_code == 200:
             _save_audio_stream(response, output_path)

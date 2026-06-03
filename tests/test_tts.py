@@ -245,6 +245,34 @@ class TestSynthesizeAudioLocal:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
+    @patch("songs_teller.tts.requests.post")
+    @patch("songs_teller.tts.config")
+    def test_synthesize_audio_local_passes_timeout(self, mock_config, mock_post):
+        """Verify timeout is forwarded to requests.post."""
+        mock_config.get.side_effect = lambda key, default=None: {
+            "local": {
+                "tts_api_url": "http://localhost:5500/v1/audio/speech",
+                "tts_voice": "alloy",
+                "tts_options": {"response_format": "mp3"},
+            },
+        }.get(key, default)
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.iter_content.return_value = [b"audio"]
+        mock_post.return_value = mock_response
+
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            path = f.name
+        try:
+            tts.synthesize_audio_local("hello", path)
+            _, kwargs = mock_post.call_args
+            assert "timeout" in kwargs
+            assert kwargs["timeout"] == tts.HTTP_TIMEOUT
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
     @patch("songs_teller.tts.config")
     def test_synthesize_audio_local_no_url(self, mock_config):
         """Test local TTS synthesis without URL."""
