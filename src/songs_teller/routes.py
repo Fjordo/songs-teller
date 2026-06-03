@@ -25,6 +25,9 @@ current_session: Dict[str, Any] = {
     "last_updated": None,
 }
 
+# Protects all reads and writes to current_session across threads
+_session_lock = threading.Lock()
+
 
 def register_routes(app: Flask) -> None:
     """
@@ -69,28 +72,25 @@ def register_routes(app: Flask) -> None:
                 "timestamp": datetime.now().isoformat(),
             }
 
-            # Check for duplicates
-            is_duplicate = any(
-                s["artist"] == artist and s["title"] == title
-                for s in current_session["songs"]
-            )
+            with _session_lock:
+                is_duplicate = any(
+                    s["artist"] == artist and s["title"] == title
+                    for s in current_session["songs"]
+                )
+                if not is_duplicate:
+                    current_session["songs"].append(song)
+                    current_session["last_updated"] = datetime.now().isoformat()
+                    if current_session["started_at"] is None:
+                        current_session["started_at"] = datetime.now().isoformat()
+                total = len(current_session["songs"])
 
             if not is_duplicate:
-                current_session["songs"].append(song)
-                current_session["last_updated"] = datetime.now().isoformat()
-
-                if current_session["started_at"] is None:
-                    current_session["started_at"] = datetime.now().isoformat()
-
-                print(
-                    f"✅ Added: {artist} - {title} (Total: {len(current_session['songs'])})"
-                )
-
+                print(f"✅ Added: {artist} - {title} (Total: {total})")
                 return jsonify(
                     {
                         "status": "success",
                         "message": "Song added",
-                        "total_songs": len(current_session["songs"]),
+                        "total_songs": total,
                     }
                 ), 200
             else:
@@ -99,7 +99,7 @@ def register_routes(app: Flask) -> None:
                     {
                         "status": "skipped",
                         "message": "Song already in session",
-                        "total_songs": len(current_session["songs"]),
+                        "total_songs": total,
                     }
                 ), 200
 
@@ -123,14 +123,19 @@ def register_routes(app: Flask) -> None:
             should_process = data.get("process", True)
             play_opening_audio = data.get("play_opening_audio", False)
 
-            if should_process and len(current_session["songs"]) > 0:
+            with _session_lock:
+                songs_snapshot = current_session["songs"].copy()
+
+            song_count = len(songs_snapshot)
+
+            if should_process and song_count > 0:
                 print(f"\n{'=' * 60}")
-                print(f"🔄 Closing Session with {len(current_session['songs'])} songs")
+                print(f"🔄 Closing Session with {song_count} songs")
                 print(f"{'=' * 60}\n")
 
                 # Save to file
                 if config.get("save_session", False):
-                    _save_session_to_file(current_session["songs"])
+                    _save_session_to_file(songs_snapshot)
 
                 # AUDIO BUFFERING: Asynchronous Playback
                 if config.get("buffer_audio", False) and config.get(
@@ -170,14 +175,12 @@ def register_routes(app: Flask) -> None:
                     audio_thread.start()
 
                 # Query LLM about the songs/artists (Generates new buffer)
-                process_with_llm(current_session["songs"])
+                process_with_llm(songs_snapshot)
 
-            song_count = len(current_session["songs"])
-
-            # Reset session
-            current_session["songs"] = []
-            current_session["started_at"] = None
-            current_session["last_updated"] = None
+            with _session_lock:
+                current_session["songs"] = []
+                current_session["started_at"] = None
+                current_session["last_updated"] = None
 
             print(f"🔄 Session reset (processed {song_count} songs)\n")
 
@@ -196,14 +199,14 @@ def register_routes(app: Flask) -> None:
     @app.route("/api/session/status", methods=["GET"])
     def get_status():
         """Get current session status."""
-        return jsonify(
-            {
+        with _session_lock:
+            snapshot = {
                 "song_count": len(current_session["songs"]),
                 "started_at": current_session["started_at"],
                 "last_updated": current_session["last_updated"],
-                "songs": current_session["songs"],
+                "songs": current_session["songs"].copy(),
             }
-        ), 200
+        return jsonify(snapshot), 200
 
     @app.route("/api/llm/context/reset", methods=["POST"])
     def reset_llm_context():
