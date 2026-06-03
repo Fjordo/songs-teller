@@ -378,13 +378,21 @@ class TestSplitTextForTTS:
 class TestPlayAndDelete:
     """Tests for play_and_delete function."""
 
+    @pytest.fixture(autouse=True)
+    def reset_mixer_flag(self):
+        """Reset the lazy-init flag so each test starts fresh."""
+        import songs_teller.tts as tts_mod
+        original = tts_mod._mixer_initialized
+        tts_mod._mixer_initialized = False
+        yield
+        tts_mod._mixer_initialized = original
+
     @patch("songs_teller.tts.pygame.mixer")
     def test_play_and_delete_success(self, mock_mixer):
         """Test successful audio playback and deletion."""
         mock_mixer.init = MagicMock()
         mock_mixer.music = MagicMock()
         mock_mixer.music.get_busy.return_value = False
-        mock_mixer.quit = MagicMock()
 
         with tempfile.NamedTemporaryFile(delete=False) as f:
             temp_path = f.name
@@ -395,12 +403,31 @@ class TestPlayAndDelete:
             mock_mixer.init.assert_called_once()
             mock_mixer.music.load.assert_called_once_with(temp_path)
             mock_mixer.music.play.assert_called_once()
-            mock_mixer.quit.assert_called_once()
-            # File should be deleted
+            # quit() is no longer called — mixer stays alive across calls
+            mock_mixer.quit.assert_not_called()
             assert not os.path.exists(temp_path)
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
+
+    @patch("songs_teller.tts.pygame.mixer")
+    def test_mixer_initialized_only_once(self, mock_mixer):
+        """_ensure_mixer should call init exactly once across multiple plays."""
+        mock_mixer.init = MagicMock()
+        mock_mixer.music = MagicMock()
+        mock_mixer.music.get_busy.return_value = False
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+            path = f.name
+            f.write(b"audio")
+
+        try:
+            tts._ensure_mixer()
+            tts._ensure_mixer()
+            mock_mixer.init.assert_called_once()
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
 
     @patch("songs_teller.tts.pygame.mixer")
     def test_play_and_delete_import_error(self, mock_mixer):
@@ -411,7 +438,6 @@ class TestPlayAndDelete:
             temp_path = f.name
 
         try:
-            # Should handle error gracefully
             tts.play_and_delete(temp_path)
         finally:
             if os.path.exists(temp_path):
