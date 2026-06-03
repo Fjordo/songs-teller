@@ -137,37 +137,7 @@ def register_routes(app: Flask) -> None:
                 if config.get("save_session", False):
                     _save_session_to_file(songs_snapshot)
 
-                # AUDIO BUFFERING: Asynchronous Playback
-                if config.get("buffer_audio", False) and config.get(
-                    "play_audio", False
-                ):
-                    mode_config = config.get(config.get("mode", "google"), {})
-                    tts_opts = mode_config.get("tts_options", {})
-                    ext = tts_opts.get("response_format", "wav")
-
-                    # Get project root for buffer file location
-                    base_path = get_project_root()
-                    buffer_file = base_path / f"buffered_commentary.{ext}"
-                    if buffer_file.exists():
-                        playing_file = base_path / f"playing_commentary.{ext}"
-
-                        if playing_file.exists():
-                            try:
-                                playing_file.unlink()
-                            except Exception as e:
-                                print(
-                                    f"⚠️ Warning: Could not remove existing playing file: {e}"
-                                )
-
-                        shutil.move(str(buffer_file), str(playing_file))
-                        print(f"🔊 Starting async playback of: {playing_file}")
-
-                        playback_thread = threading.Thread(
-                            target=play_and_delete, args=(str(playing_file),)
-                        )
-                        playback_thread.start()
-                    else:
-                        print("ℹ️  No buffered audio found. Nothing to play yet.")
+                _handle_buffered_audio()
 
                 # Play opening audio asynchronously before/during LLM invocation
                 if play_opening_audio:
@@ -231,6 +201,34 @@ def register_routes(app: Flask) -> None:
         except Exception as e:
             print(f"❌ Error resetting LLM context: {e}")
             return jsonify({"status": "error", "message": "Internal server error"}), 500
+
+
+def _handle_buffered_audio() -> None:
+    """Play the previously buffered commentary audio if one exists."""
+    if not config.get("buffer_audio", False) or not config.get("play_audio", False):
+        return
+
+    mode_config = config.get(config.get("mode", "google"), {})
+    tts_opts = mode_config.get("tts_options", {})
+    ext = tts_opts.get("response_format", "wav")
+
+    base_path = get_project_root()
+    buffer_file = base_path / f"buffered_commentary.{ext}"
+
+    if not buffer_file.exists():
+        print("ℹ️  No buffered audio found. Nothing to play yet.")
+        return
+
+    playing_file = base_path / f"playing_commentary.{ext}"
+    if playing_file.exists():
+        try:
+            playing_file.unlink()
+        except Exception as e:
+            print(f"⚠️ Warning: Could not remove existing playing file: {e}")
+
+    shutil.move(str(buffer_file), str(playing_file))
+    print(f"🔊 Starting async playback of: {playing_file}")
+    threading.Thread(target=play_and_delete, args=(str(playing_file),), daemon=True).start()
 
 
 def _save_session_to_file(songs: List[Dict]) -> None:
