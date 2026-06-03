@@ -1,193 +1,202 @@
 # Songs Teller
 
-**Songs Teller** is an intelligent audio session tracker and analyzer. It receives real-time song information, tracks sessions, and uses a local Large Language Model (LLM) to generate engaging narratives, summaries, or DJ-style commentary about the played music.
+**Songs Teller** is an intelligent audio session tracker for DJs. It receives real-time song information via REST API, accumulates a session, and when the session is reset it uses an LLM (Google Gemini or local Ollama) to generate DJ-style commentary about the played music, then synthesises it to audio via Google Cloud TTS or a local Chatterbox-compatible service.
 
 ## Features
 
-- **Real-time Song Tracking**: Add songs to a session via a simple REST API.
-- **Session Management**: Track session start time, duration, and song history.
-- **AI Integration**: Automatically analyzes the session using a local LLM (Ollama) when the session is reset.
-- **Text-to-Speech**: Generates audio using a Chatterbox-compatible TTS service.
-- **Customizable Prompts**: Define the persona and output style via an external text file.
+- **Real-time song tracking** — add songs to a session via a simple REST API
+- **Session management** — tracks start time, duration, and song history; detects duplicates
+- **AI commentary** — generates radio DJ-style narration using Google Gemini or local Ollama
+- **Text-to-Speech** — synthesises audio via Google Cloud TTS or a Chatterbox-compatible service
+- **Async processing** — session resets return immediately; LLM + TTS run in the background
+- **Audio buffering** — pre-generates commentary for the next session while the current one is playing
+- **Optional authentication** — protect the API with a static key via `API_KEY` env variable
+- **Customisable prompt** — edit `config/prompt.txt` to change the AI persona and style
 
 ## Architecture
 
-- **Backend**: Python (Flask)
-- **AI Engine**: LangChain + Ollama (Local Llama 3.1) or Google Gemini
-- **TTS Engine**: Google Cloud TTS or Chatterbox-compatible Service
-- **Data format**: JSON
+| Layer | Technology |
+| ----- | ---------- |
+| Backend | Python 3.8+, Flask |
+| LLM (cloud) | Google Gemini via LangChain |
+| LLM (local) | Ollama (Llama 3, Gemma, …) |
+| TTS (cloud) | Google Cloud Text-to-Speech |
+| TTS (local) | Chatterbox-compatible service |
+| Audio playback | pygame |
 
-## Project Structure
+## Repository Structure
 
-```properties
+```text
 songs-teller/
-├── src/
-│   └── songs_teller/          # Main package
-│       ├── __init__.py
-│       ├── api.py            # Flask application entry point
-│       ├── routes.py         # API route handlers
-│       ├── config.py         # Configuration loader
-│       ├── llm.py            # LLM integration (Google/Ollama)
-│       └── tts.py            # Text-to-Speech integration
-├── config/                   # Configuration files
-│   ├── config.json           # Main configuration
-│   ├── prompt.txt            # LLM prompt template
-│   ├── .env.example          # Environment variables template
-│   └── google_cloud_tts_key.json  # Google Cloud credentials (not in git)
-├── tests/                    # Test files
-│   ├── __init__.py
-│   ├── test_with_cloud_console.py
-│   └── test_with_google_ai_studio.py
-├── scripts/                   # Utility scripts
-│   └── run.py                # Entry point script
-├── docs/                      # Documentation
+├── assets/
+│   └── audio/
+│       └── opening.mp3          # optional intro audio clip
+├── config/
+│   ├── config.json              # main configuration (mode, models, voices…)
+│   ├── prompt.txt               # LLM instruction template
+│   └── .env.example             # environment variables template
+├── data/
+│   └── sessions/                # saved session JSON files (gitignored)
+├── docs/
 │   ├── API_USAGE.md
 │   ├── RUNNING_OLLAMA_LOCALLY.md
-│   └── RUNNING_CHATTERBOX_LOCALLY.md
-├── api/                       # API definitions
-│   └── songs-teller.postman_collection.json
-├── pyproject.toml            # Python package configuration
-├── requirements.txt          # Python dependencies
-└── README.md
+│   ├── RUNNING_CHATTERBOX_LOCALLY.md
+│   ├── examples/
+│   │   └── sample_songs_list.json
+│   └── postman/
+│       └── songs-teller.postman_collection.json
+├── src/
+│   └── songs_teller/            # installable Python package
+│       ├── api.py               # Flask app factory + main() entry point
+│       ├── routes.py            # API route handlers
+│       ├── config.py            # configuration loader
+│       ├── llm.py               # LLM integration (Google / Ollama)
+│       ├── tts.py               # TTS integration (Google / Chatterbox)
+│       └── utils.py             # shared helpers
+├── tests/
+│   ├── conftest.py
+│   └── test_*.py
+├── .github/
+│   ├── dependabot.yml
+│   └── workflows/automatic-tests.yml
+└── pyproject.toml
 ```
 
 ## Getting Started
 
 ### Prerequisites
 
-1. **Python 3.8+**
-2. **Ollama**: For running the local LLM.
-    - See [Running Ollama Locally](docs/RUNNING_OLLAMA_LOCALLY.md).
-3. **Chatterbox TTS**:
-    - You must configure a Chatterbox service.
-    - See [Running Chatterbox Locally](docs/RUNNING_CHATTERBOX_LOCALLY.md).
+- **Python 3.8+**
+- For local mode: a running [Ollama](docs/RUNNING_OLLAMA_LOCALLY.md) instance and a [Chatterbox](docs/RUNNING_CHATTERBOX_LOCALLY.md) TTS service
+- For Google mode: a Google AI Studio API key and a Google Cloud service account JSON with TTS permissions
 
 ### Installation
 
-1. Clone the repository and navigate to the folder.
-2. Create a virtual environment (recommended):
+```bash
+git clone <repo-url>
+cd songs-teller
 
-    ```bash
-    python -m venv .venv
-    .venv\Scripts\activate  # On Windows
-    # or
-    source .venv/bin/activate  # On Linux/Mac
-    ```
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# Linux / macOS
+source .venv/bin/activate
 
-3. Install Python dependencies:
+pip install -e .
+```
 
-    ```bash
-    pip install -e .
-    ```
+For development (includes pytest, black, flake8, mypy):
 
-    Or install dependencies directly:
-
-    ```bash
-    pip install -r requirements.txt
-    ```
+```bash
+pip install -e ".[dev]"
+```
 
 ### Configuration
 
-1. Copy the example environment file:
+#### 1. Environment variables
 
-    ```bash
-    copy config\.env.example config\.env  # On Windows
-    # or
-    cp config/.env.example config/.env  # On Linux/Mac
-    ```
+```bash
+# Windows
+copy config\.env.example config\.env
+# Linux / macOS
+cp config/.env.example config/.env
+```
 
-2. Edit `config/.env` and add your API keys:
+Edit `config/.env`:
 
-    ```properties
-    GOOGLE_AI_STUDIO_API_KEY=your_api_key_here
-    ```
+```env
+# Required for Google mode
+GOOGLE_AI_STUDIO_API_KEY=your_api_key_here
 
-3. Edit `config/config.json` to configure LLM and TTS:
+# Optional: enable API key authentication
+API_KEY=
+```
 
-    ```json
-    {
-        "mode": "google",
-        "google": {
-            "llm_model": "gemini-2.0-flash",
-            "tts_key_path": "google_cloud_tts_key.json",
-            "tts_voice": "en-US-Neural2-D"
-        },
-        "local": {
-            "llm_api_url": "http://localhost:11434",
-            "llm_model": "llama3.1",
-            "tts_api_url": "http://localhost:5500/v1/audio/speech"
-        },
-        "prompt_file": "prompt.txt",
-        "play_audio": true
-    }
-    ```
+#### 2. `config/config.json`
 
-4. Place your Google Cloud service account JSON key file in `config/google_cloud_tts_key.json` (if using Google TTS).
+Choose `"mode": "google"` or `"mode": "local"` and fill in the relevant section:
 
-5. Edit `config/prompt.txt` to change the instruction given to the AI.
+```json
+{
+    "mode": "google",
+    "google": {
+        "llm_model": "gemma-4-31b-it",
+        "tts_key_path": "your-service-account.json",
+        "tts_voice": "en-US-Neural2-D",
+        "tts_language_code": "en-US"
+    },
+    "local": {
+        "llm_api_url": "http://localhost:11434",
+        "llm_model": "llama3.1",
+        "tts_api_url": "http://localhost:4123/v1/audio/speech"
+    },
+    "prompt_file": "prompt.txt",
+    "play_audio": true,
+    "save_session": false,
+    "buffer_audio": false,
+    "opening_audio_path": "assets/audio/opening.mp3"
+}
+```
+
+#### 3. Google Cloud credentials (Google mode only)
+
+Place the service account JSON file in `config/` and set its name in `config.json` under `google.tts_key_path`.
 
 ## Usage
 
-### 1. Start the Server
-
-**Option 1: Using the entry point script (recommended)**
+### Start the server
 
 ```bash
-python scripts/run.py
-```
+# Recommended — uses the installed console script
+songs-teller
 
-**Option 2: Using Python module**
-
-```bash
+# Alternative — run as a Python module
 python -m songs_teller.api
 ```
 
-**Option 3: Using Flask directly**
+The server starts on `http://localhost:5000`.
 
-```bash
-export FLASK_APP=src/songs_teller/api.py  # Linux/Mac
-set FLASK_APP=src\songs_teller\api.py     # Windows
-flask run
-```
+### API quick reference
 
-*Server runs on <http://localhost:5000>*
-
-### 2. Using the API
-
-See [docs/API_USAGE.md](docs/API_USAGE.md) for detailed API definitions.
-
-**Brief Example (PowerShell):**
+See [docs/API_USAGE.md](docs/API_USAGE.md) for the full reference including authentication headers.
 
 ```powershell
 # Add a song
-Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/song" -Body (@{artist="Pink Floyd"; title="Time"} | ConvertTo-Json) -ContentType "application/json"
+Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/song" `
+  -Body (@{artist="Pink Floyd"; title="Time"} | ConvertTo-Json) `
+  -ContentType "application/json"
 
-# Reset session and trigger AI analysis
-Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/session/reset" -Body (@{process=$true; play_opening_audio=$true} | ConvertTo-Json) -ContentType "application/json"
+# Reset session and trigger AI commentary (returns immediately)
+Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/session/reset" `
+  -Body (@{process=$true; play_opening_audio=$true} | ConvertTo-Json) `
+  -ContentType "application/json"
+
+# Check session state
+Invoke-RestMethod -Uri "http://localhost:5000/api/session/status"
+```
+
+### Authentication
+
+When `API_KEY` is set in `.env`, add the header to every request:
+
+```powershell
+-Headers @{"X-Api-Key" = "your-secret-key"}
 ```
 
 ## Testing
 
-The project includes comprehensive tests. To run them:
-
 ```bash
-# Install test dependencies
-pip install -e ".[dev]"
-
 # Run all tests
 pytest
 
-# Run tests with coverage
+# With coverage report
 pytest --cov=songs_teller --cov-report=html
-
-# Run specific test file
-pytest tests/test_api_routes.py
 ```
-
-See [tests/README.md](tests/README.md) for more details.
 
 ## Documentation
 
-- [API Usage Guide](docs/API_USAGE.md)
-- [Running Ollama Locally](docs/RUNNING_OLLAMA_LOCALLY.md)
-- [Test Documentation](tests/README.md)
+| Document | Description |
+| -------- | ----------- |
+| [docs/API_USAGE.md](docs/API_USAGE.md) | Full API reference with request/response examples |
+| [docs/RUNNING_OLLAMA_LOCALLY.md](docs/RUNNING_OLLAMA_LOCALLY.md) | Set up a local Ollama LLM |
+| [docs/RUNNING_CHATTERBOX_LOCALLY.md](docs/RUNNING_CHATTERBOX_LOCALLY.md) | Set up a local Chatterbox TTS |
