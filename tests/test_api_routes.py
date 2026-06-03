@@ -273,10 +273,13 @@ class TestResetLLMContext:
     @patch("songs_teller.routes.force_unload_model")
     def test_reset_llm_context_exception(self, mock_unload, client):
         """Test resetting LLM context when an exception occurs."""
-        mock_unload.side_effect = Exception("Connection error")
+        mock_unload.side_effect = Exception("Connection error db://secret@host/db")
 
         response = client.post("/api/llm/context/reset")
 
         assert response.status_code == 500
         data = json.loads(response.data)
         assert data["status"] == "error"
+        # Internal details must not leak into the response
+        assert "secret" not in data["message"]
+        assert data["message"] == "Internal server error"

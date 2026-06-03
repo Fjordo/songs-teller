@@ -97,8 +97,8 @@ def register_routes(app: Flask) -> None:
                 ), 200
 
         except Exception as e:
-            print(f"❌ Error: {e}")
-            return jsonify({"error": str(e)}), 500
+            print(f"❌ Error in add_song: {e}")
+            return jsonify({"error": "Internal server error"}), 500
 
     @app.route("/api/session/reset", methods=["POST"])
     def reset_session():
@@ -183,8 +183,8 @@ def register_routes(app: Flask) -> None:
             ), 200
 
         except Exception as e:
-            print(f"❌ Error: {e}")
-            return jsonify({"error": str(e)}), 500
+            print(f"❌ Error in reset_session: {e}")
+            return jsonify({"error": "Internal server error"}), 500
 
     @app.route("/api/session/status", methods=["GET"])
     def get_status():
@@ -220,7 +220,7 @@ def register_routes(app: Flask) -> None:
 
         except Exception as e:
             print(f"❌ Error resetting LLM context: {e}")
-            return jsonify({"status": "error", "message": str(e)}), 500
+            return jsonify({"status": "error", "message": "Internal server error"}), 500
 
 
 def _save_session_to_file(songs: List[Dict]) -> None:
