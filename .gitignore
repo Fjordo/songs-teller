@@ -46,5 +46,8 @@ google_cloud_tts_key.json
 *.mp3
 buffered_commentary.*
 playing_commentary.*
-song_session_*.json
 !**/audio/opening.mp3
+
+# Session files
+song_session_*.json
+data/sessions/*.json

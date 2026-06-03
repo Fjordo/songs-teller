@@ -242,11 +242,15 @@ def _handle_buffered_audio() -> None:
     threading.Thread(target=play_and_delete, args=(str(playing_file),), daemon=True).start()
 
 
+_SESSIONS_DIR = get_project_root() / "data" / "sessions"
+
+
 def _save_session_to_file(songs: List[Dict]) -> None:
-    """Save songs to a JSON file with timestamp."""
+    """Save songs to a timestamped JSON file inside data/sessions/."""
     try:
+        _SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = get_project_root() / f"song_session_{timestamp}.json"
+        filename = _SESSIONS_DIR / f"song_session_{timestamp}.json"
 
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(songs, f, indent=2, ensure_ascii=False)
