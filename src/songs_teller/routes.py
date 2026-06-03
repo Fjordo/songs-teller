@@ -16,6 +16,8 @@ from songs_teller.llm import force_unload_model, process_with_llm
 from songs_teller.tts import play_and_delete, play_audio
 from songs_teller.utils import get_project_root
 
+MAX_FIELD_LENGTH = 200  # max characters for artist / title fields
+
 # In-memory storage for current song session
 current_session: Dict[str, Any] = {
     "songs": [],
@@ -55,6 +57,11 @@ def register_routes(app: Flask) -> None:
 
             if not artist or not title:
                 return jsonify({"error": "Both artist and title are required"}), 400
+
+            if len(artist) > MAX_FIELD_LENGTH or len(title) > MAX_FIELD_LENGTH:
+                return jsonify(
+                    {"error": f"artist and title must not exceed {MAX_FIELD_LENGTH} characters"}
+                ), 400
 
             song = {
                 "artist": artist,

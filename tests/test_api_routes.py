@@ -92,6 +92,38 @@ class TestAddSong:
         assert data["message"] == "Song already in session"
         assert data["total_songs"] == 1  # Still only one song
 
+    def test_add_song_artist_too_long(self, client):
+        """Test that artist exceeding MAX_FIELD_LENGTH is rejected."""
+        response = client.post(
+            "/api/song",
+            data=json.dumps({"artist": "A" * 201, "title": "Valid"}),
+            content_type="application/json",
+        )
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert "error" in data
+        assert "200" in data["error"]
+
+    def test_add_song_title_too_long(self, client):
+        """Test that title exceeding MAX_FIELD_LENGTH is rejected."""
+        response = client.post(
+            "/api/song",
+            data=json.dumps({"artist": "Valid", "title": "T" * 201}),
+            content_type="application/json",
+        )
+        assert response.status_code == 400
+
+    def test_add_song_at_max_length_accepted(self, client):
+        """Exactly MAX_FIELD_LENGTH characters should be accepted."""
+        response = client.post(
+            "/api/song",
+            data=json.dumps({"artist": "A" * 200, "title": "T" * 200}),
+            content_type="application/json",
+        )
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data["status"] == "success"
+
     def test_add_multiple_songs(self, client, sample_songs):
         """Test adding multiple different songs."""
         for song in sample_songs:
