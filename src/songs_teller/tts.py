@@ -361,6 +361,8 @@ def _play_audio_file(file_path: str) -> None:
     while pygame.mixer.music.get_busy():
         time.sleep(AUDIO_POLL_INTERVAL)
 
+    pygame.mixer.music.unload()
+
 
 def play_audio(file_path: str) -> None:
     """
