@@ -17,7 +17,7 @@ jobs:
       SDL_AUDIODRIVER: dummy   # prevent pygame from crashing on headless runner
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
